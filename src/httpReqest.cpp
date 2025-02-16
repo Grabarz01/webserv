@@ -15,13 +15,12 @@ typedef struct s_httpRequest {
 
 } t_httpRequest;
 
-void getRequest(std::string buffer) {
+void getRequset(std::string buffer) {
   t_httpRequest request;
   std::string temp;
   std::istringstream ask(buffer);
   ask >> request.method >> request.path >> request.version;
 
-  std::map<std::string, std::string> headers;
   std::string header_line;
   std::getline(ask, header_line);
   while (std::getline(ask, header_line) && header_line != "\r") {
@@ -30,7 +29,7 @@ void getRequest(std::string buffer) {
     if (std::getline(header_stream, key, ':')) {
       std::string value;
       std::getline(header_stream, value);
-      headers[key] = value.substr(1);
+      headers[key] = value.substr(1);  // Usuń spację na początku wartości
     }
   }
 
