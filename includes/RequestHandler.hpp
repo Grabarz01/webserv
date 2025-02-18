@@ -18,6 +18,7 @@ class RequestHandler {
   std::map<std::string, std::string> headers;
   std::string body;
   std::string responseContent;
+  unsigned int responseStatus;
 
   void parseRequest();
 
@@ -25,10 +26,12 @@ class RequestHandler {
   RequestHandler(std::string rawRequest);
   ~RequestHandler();
 
-  void printRequest();
-  const std::string& RequestHandler::getRawRequest() const;
   void handleRequest();
-  const std::string& getResponseContent() const; 
+  void printRequest();
+
+  const std::string& getRawRequest() const;
+  const std::string& getResponseContent() const;
+  const unsigned int getResponseStatus() const;
 };
 
 #endif

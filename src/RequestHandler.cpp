@@ -1,7 +1,7 @@
 #include "RequestHandler.hpp"
 
 RequestHandler::RequestHandler(std::string rawRequest)
-    : rawRequest(rawRequest) {
+    : rawRequest(rawRequest), responseStatus(200) {
   parseRequest();
 };
 RequestHandler::~RequestHandler() {};
@@ -9,7 +9,7 @@ RequestHandler::~RequestHandler() {};
 void RequestHandler::parseRequest() {
   std::istringstream req(rawRequest);
   req >> this->method >> this->path >> this->version;
-
+  std::cerr << "method: " << method << std::endl;
   std::string header_line;
   std::getline(req, header_line);
   while (std::getline(req, header_line) && header_line != "\r") {
@@ -24,12 +24,12 @@ void RequestHandler::parseRequest() {
 
   if (headers.find("Content-Length") != headers.end()) {
     std::string body_line;
-    long conLen = atoi(headers["Content-Length"].c_str()) - 2;
+    std::getline(req, body_line); //to omit empty line
+    long conLen = atoi(headers["Content-Length"].c_str());
     while (std::getline(req, body_line) || this->body.length() != conLen) {
       this->body.append(body_line);
       this->body.append("\n");
     }
-    // std::cout << body.length() << std::endl;
   }
 }
 
@@ -49,9 +49,13 @@ void RequestHandler::printRequest() {
 
 void RequestHandler::handleRequest() {
   if (method == "GET") {
+    //TODO: replace erase with proper path checking
+    path.erase(path.begin());
     std::ifstream file(path.c_str());
-    if (!file.is_open())
-      throw std::runtime_error("cannot open file");
+    if (!file.is_open()) {
+      responseStatus = 404;
+      return;
+    }
 
     std::stringstream buffer;
     buffer << file.rdbuf();
@@ -64,8 +68,9 @@ void RequestHandler::handleRequest() {
 }
 
 const std::string& RequestHandler::getResponseContent() const {
-  if (!responseContent.empty())
     return responseContent;
-  else
-    throw std::runtime_error("Reponse content is empty");
+}
+
+const unsigned int RequestHandler::getResponseStatus() const {
+  return responseStatus;
 }
