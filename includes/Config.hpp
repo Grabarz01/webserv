@@ -5,6 +5,9 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <stdexcept>
+#include <sstream>
 
 namespace ConfigTypes {
 
@@ -12,7 +15,7 @@ namespace ConfigTypes {
     std::string root;
     std::string index;
     bool autoindex;
-    std::string allowedMethods;
+    std::set<std::string> allowedMethods;
     std::string redirect;
   };
   
@@ -30,11 +33,12 @@ class Config {
   Config();
   ~Config();
 
-  void loadFromFile(std::string path);
-  ConfigTypes::ServerConfig& getServerConfig(std::string& serverName);
+  void loadFromFile(const std::string& path);
+  ConfigTypes::ServerConfig& getServerConfig(const std::string& serverName);
 
  private:
   std::vector<ConfigTypes::ServerConfig> servers;
+
 };
 
 #endif
