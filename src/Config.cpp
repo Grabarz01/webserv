@@ -78,7 +78,7 @@ void parseRoute(ConfigTypes::ServerConfig& server,
         return;
       } break;
       default:
-        throw std::runtime_error("Error parsing configuration file");
+        throw std::runtime_error("Unexpected line in configuration file");
     }
   }
 }
@@ -114,7 +114,7 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
         return;
         break;
       default:
-        throw std::runtime_error("Error parsing configuration file");
+        throw std::runtime_error("Unexpected line in configuration file");
     }
   }
 }
@@ -130,11 +130,13 @@ void Config::loadFromFile(const std::string& path) {
   while (std::getline(file, line)) {
     if (line.empty())
       continue;
-    if (line.at(line.size() - 1) == '{') {
+    if (line == "server {") {
       ConfigTypes::ServerConfig server;
       parseServer(server, file);
       servers.push_back(server);
-    }
+    } else
+      throw std::runtime_error("Unexpected line in configuration file");
+
     // std::cout << "server parsing done" << std::endl;
   }
   setPorts();
