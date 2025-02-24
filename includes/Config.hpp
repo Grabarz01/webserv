@@ -8,6 +8,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <sstream>
+// #include <iostream>
 
 namespace ConfigTypes {
 
@@ -30,9 +31,6 @@ namespace ConfigTypes {
 
 class Config {
  public:
-  Config();
-  ~Config();
-
   void loadFromFile(const std::string& path);
   ConfigTypes::ServerConfig& getServerConfig(const std::string& serverName);
 

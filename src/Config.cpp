@@ -1,9 +1,5 @@
 #include "Config.hpp"
 
-//TODO: copy constructor and =operator
-Config::Config() {};
-Config::~Config() {};
-
 namespace {
 enum ParameterType {
   PARAM_LISTEN,
@@ -14,7 +10,8 @@ enum ParameterType {
   PARAM_ROUTE_ROOT,
   PARAM_ROUTE_INDEX,
   PARAM_ROUTE_RETURN,
-  PARAM_ROUTE_AUTOINDEX
+  PARAM_ROUTE_AUTOINDEX,
+  PARAM_CLOSING_BRACKET
 };
 
 ParameterType getParameterType(const std::string& param) {
@@ -34,11 +31,13 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_ROUTE_RETURN;
   else if (param == "autoindex")
     return PARAM_ROUTE_AUTOINDEX;
+  else if (param == "}")
+    return PARAM_CLOSING_BRACKET;
   else
     return PARAM_UNKNOWN;
 }
 
-//TODO: extensive tests, proper validation
+// TODO: extensive tests, proper validation
 void parseRoute(ConfigTypes::ServerConfig& server,
                 std::istringstream& iss,
                 std::ifstream& file) {
@@ -47,20 +46,20 @@ void parseRoute(ConfigTypes::ServerConfig& server,
   iss >> routePath;
 
   std::string line;
-  while (std::getline(file, line) && line.at(line.size() - 1) != '}') {
+  while (std::getline(file, line)) {
     std::string parameter;
     std::istringstream routeIss(line);
     routeIss >> parameter;
     if (parameter.empty())
       continue;
+
     ParameterType type = getParameterType(parameter);
-    switch (type) { 
+    switch (type) {
       case PARAM_ROUTE_ALLOWED_METH: {
         std::string allowedMethod;
         while (routeIss >> allowedMethod)
           route.allowedMethods.insert(allowedMethod);
-        }
-        break;
+      } break;
       case PARAM_ROUTE_ROOT:
         routeIss >> route.root;
         break;
@@ -73,53 +72,69 @@ void parseRoute(ConfigTypes::ServerConfig& server,
       case PARAM_ROUTE_AUTOINDEX:
         routeIss >> route.autoindex;
         break;
+      case PARAM_CLOSING_BRACKET: {
+        server.routes[routePath] = route;
+        // std::cout << "parsing route done" << std::endl;
+        return;
+      } break;
       default:
         throw std::runtime_error("Error parsing configuration file");
     }
   }
-  server.routes[routePath] = route;
+}
+
+void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
+  std::string line;
+  while (std::getline(file, line)) {
+    if (line.empty())
+      continue;
+
+    std::string parameter;
+    std::istringstream iss(line);
+    iss >> parameter;
+
+    if (parameter.empty())
+      continue;
+    ParameterType type = getParameterType(parameter);
+    switch (type) {
+      case PARAM_LISTEN:
+        if (!(iss >> server.port))
+          throw std::runtime_error("Conversion to int error in port attribute");
+        break;
+      case PARAM_SERVER_NAMES: {
+        std::string serverName;
+        while (iss >> serverName)
+          server.serverNames.insert(serverName);
+      } break;
+      case PARAM_LOCATION:
+        parseRoute(server, iss, file);
+        break;
+      case PARAM_CLOSING_BRACKET:
+        return;
+        break;
+      default:
+        throw std::runtime_error("Error parsing configuration file");
+    }
+  }
 }
 
 }  // namespace
 
 void Config::loadFromFile(const std::string& path) {
   std::ifstream file(path.c_str());
-
   if (!file.is_open())
     throw std::runtime_error("File at " + path + " does not exist");
 
   std::string line;
   while (std::getline(file, line)) {
+    if (line.empty())
+      continue;
     if (line.at(line.size() - 1) == '{') {
       ConfigTypes::ServerConfig server;
-
-      while (std::getline(file, line) && line.at(line.size() - 1) != '}') {
-        std::string parameter;
-        std::istringstream iss(line);
-        iss >> parameter;
-        if (parameter.empty())
-          continue;
-        ParameterType type = getParameterType(parameter);
-        switch (type) {
-          case PARAM_LISTEN:
-            if (!(iss >> server.port))
-              throw std::runtime_error(
-                  "Conversion to int error in port attribute");
-            break;
-          case PARAM_SERVER_NAMES: {
-            std::string serverName;
-            while (iss >> serverName)
-              server.serverNames.insert(serverName);
-          } break;
-          case PARAM_LOCATION:
-            parseRoute(server, iss, file);
-            break;
-          default:
-            throw std::runtime_error("Error parsing configuration file");
-        }
-      }
+      parseServer(server, file);
       servers.push_back(server);
     }
+    // std::cout << "server parsing done" << std::endl;
   }
 };
 
@@ -134,5 +149,5 @@ ConfigTypes::ServerConfig& Config::getServerConfig(
       }
     }
   }
-  return servers.at(0);
+  throw std::runtime_error("No configuration found for the specified server");
 };
