@@ -97,10 +97,11 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
       continue;
     ParameterType type = getParameterType(parameter);
     switch (type) {
-      case PARAM_LISTEN:
-        if (!(iss >> server.port))
-          throw std::runtime_error("Conversion to int error in port attribute");
-        break;
+      case PARAM_LISTEN: {
+        unsigned int port;
+        while (iss >> port)
+          server.ports.insert(port);
+      } break;
       case PARAM_SERVER_NAMES: {
         std::string serverName;
         while (iss >> serverName)
@@ -136,18 +137,33 @@ void Config::loadFromFile(const std::string& path) {
     }
     // std::cout << "server parsing done" << std::endl;
   }
+  setPorts();
 };
 
 ConfigTypes::ServerConfig& Config::getServerConfig(
-    const std::string& serverName) {
+    const std::string& serverName,
+    const std::string& port) {
+  unsigned int portInt = std::atoi(port.c_str());
   std::vector<ConfigTypes::ServerConfig>::iterator it = servers.begin();
   for (; it != servers.end(); it++) {
-    std::set<std::string>::iterator sIt = (*it).serverNames.begin();
-    for (; sIt != (*it).serverNames.end(); sIt++) {
-      if (*sIt == serverName) {
-        return *it;
-      }
+    if (it->ports.find(portInt) != it->ports.end() &&
+        it->serverNames.find(serverName) != it->serverNames.end()) {
+      return *it;
     }
   }
   throw std::runtime_error("No configuration found for the specified server");
-};
+}
+
+void Config::setPorts() {
+  std::vector<ConfigTypes::ServerConfig>::iterator it = servers.begin();
+  for (; it != servers.end(); it++) {
+    std::set<unsigned int>::iterator it2 = it->ports.begin();
+    for (; it2 != it->ports.end(); it2++) {
+      ports.insert(*it2);
+    }
+  }
+}
+
+const std::set<unsigned int>& Config::getPorts() const {
+  return ports;
+}

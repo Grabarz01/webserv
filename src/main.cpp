@@ -13,9 +13,16 @@
 
 int main() {
   try {
+    Config conf;
+    conf.loadFromFile("example_files/webserv.conf");
+    
     Server server;
-    server.addPort(8081);
-    server.addPort(8080);
+    std::set<unsigned int> ports = conf.getPorts();
+    std::set<unsigned int>::const_iterator it = ports.begin();
+    for (; it != ports.end(); it++) {
+      std::cout << *it << std::endl;
+      server.addPort(*it);
+    }
     server.setServer();
     server.serverListen();
   } catch (const std::exception& e) {

@@ -8,7 +8,8 @@
 #include <fstream>
 #include <stdexcept>
 #include <sstream>
-// #include <iostream>
+#include <cstdlib>
+#include <iostream>
 
 namespace ConfigTypes {
 
@@ -21,7 +22,7 @@ namespace ConfigTypes {
   };
   
   struct ServerConfig {
-    int port;
+    std::set<unsigned int> ports;
     std::string host;
     std::set<std::string> serverNames;
     std::map<std::string, RouteConfig> routes;
@@ -32,10 +33,14 @@ namespace ConfigTypes {
 class Config {
  public:
   void loadFromFile(const std::string& path);
-  ConfigTypes::ServerConfig& getServerConfig(const std::string& serverName);
+  ConfigTypes::ServerConfig& getServerConfig(const std::string& serverName, const std::string& port);
+  const std::set<unsigned int>& getPorts() const;
 
  private:
   std::vector<ConfigTypes::ServerConfig> servers;
+  std::set<unsigned int> ports;
+
+  void setPorts();
 
 };
 
