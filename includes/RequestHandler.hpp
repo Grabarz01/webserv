@@ -19,9 +19,16 @@ class RequestHandler {
   std::string body;
   std::string responseContent;
   unsigned int responseStatus;
-
+	long conLen;
   void parseRequest();
 
+  //methods
+  void getReq(void);
+  void postReq(void);
+  void deleteReq(void);
+  bool availabilityCheck(void);
+  void getLocationConfig(void);
+  
  public:
   RequestHandler(std::string rawRequest);
   ~RequestHandler();
