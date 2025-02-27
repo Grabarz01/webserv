@@ -18,16 +18,18 @@ namespace ConfigTypes {
     std::string index;
     bool autoindex;
     std::set<std::string> allowedMethods;
-    std::string redirect;
+    std::vector<std::string> redirect;
   };
   
   struct ServerConfig {
     std::set<unsigned int> ports;
     std::string host;
     std::set<std::string> serverNames;
+    RouteConfig defaultRoute;
     std::map<std::string, RouteConfig> routes;
-  };
 
+    ServerConfig();
+  };
 }
 
 class Config {
