@@ -86,6 +86,7 @@ bool RequestHandler::availabilityCheck(void)  // serwerconfig
 }
 
 void RequestHandler::getReq(void) {
+
   // TODO: replace erase with proper path checking
   path.erase(path.begin());
   std::ifstream file(path.c_str());
@@ -101,20 +102,19 @@ void RequestHandler::getReq(void) {
 }
 
 /*cases:
-content-size = 0 
+content-size = 0
 no content-size
 */
 void RequestHandler::postReq() {
-	size_t pos_py = path.find("py");
-	size_t pos_query = path.find("?");
-	if(pos_py == std::string::npos || pos_query != std::string::npos && pos_query < pos_py)
-	{
-		throw std::runtime_error("Unsuported Media Type");
-	}
-	Cgi cgi;
-	cgi.extractEnv(path, pos_py, pos_query);
-	
-	//
+  size_t pos_py = path.find(".py");
+  size_t pos_query = path.find("?");
+  if (pos_py == std::string::npos ||
+      pos_query != std::string::npos && pos_query < pos_py) {
+    throw std::runtime_error("Unsuported Media Type");
+  }
+  Cgi cgi;
+  cgi.extractEnv(path, pos_query, pos_py);
+
   int pipe_input[2];
   int pipe_response[2];
   if (pipe(pipe_input) == -1 || pipe(pipe_response) == -1) {
@@ -131,7 +131,7 @@ void RequestHandler::postReq() {
   }
 
   if (pid == 0) {
-    // (CGI)
+    // CGI
     close(pipe_input[1]);
     close(pipe_response[0]);
 
@@ -140,17 +140,28 @@ void RequestHandler::postReq() {
     close(pipe_input[0]);
     close(pipe_response[1]);
 
-    std::string contentLength = "CONTENT_LENGTH=" + headers["Content-Length"];
-    std::string contentType = "CONTENT_TYPE=" + headers["Content-Type"];
+    std::string requestMethod = "REQUEST_METHOD=POST";
+    std::string contentLength =
+        headers.count("Content-Length")
+            ? "CONTENT_LENGTH=" + headers["Content-Length"]
+            : "CONTENT_LENGTH=0";
+    std::string contentType = headers.count("Content-Type")
+                                  ? "CONTENT_TYPE=" + headers["Content-Type"]
+                                  : "CONTENT_TYPE=text/plain";
+    std::string serverProtocol = "SERVER_PROTOCOL=HTTP/1.1";
+    char* envp[] = {const_cast<char*>(requestMethod.c_str()),  const_cast<char*>(contentLength.c_str()),
+                    const_cast<char*>(contentType.c_str()),    const_cast<char*>(cgi.getPath().c_str()),
+                    const_cast<char*>(cgi.getQuery().c_str()), NULL};
+    char python_path[] = "/usr/bin/python3";
+	std::string str = "/home/filip/webserv2" + cgi.getScript();
 
-    char* envp[] = {(char*)contentLength.c_str(), (char*)contentType.c_str(),
-                    NULL};
-
-    const char* script_path = "//script.py";
-    char* args[] = {(char*)script_path, NULL};
-
-    execve(script_path, args, envp);
-    std::cerr << "Execve failed\n";
+    char* script_path = const_cast<char*>(str.c_str());
+	std::cerr << "here" << script_path << "?";
+    char* args[] = {python_path, script_path, NULL};
+	std::cerr << "Attempting to exec: " << python_path << " " << script_path << std::endl;
+    execve(args[1], args, envp);
+	std::cout << args[0] << std::endl;
+    perror("Execve failed\n");
     exit(1);
   } else {
     // server
@@ -160,17 +171,43 @@ void RequestHandler::postReq() {
     write(pipe_input[1], body.c_str(), body.size());
     close(pipe_input[1]);
 
-    char buffer[4096];
-    ssize_t bytesRead = read(pipe_response[0], buffer, sizeof(buffer) - 1);
-    if (bytesRead > 0) {
+    char buffer[1024];
+    responseContent = "";
+    ssize_t bytesRead;
+    while ((bytesRead = read(pipe_response[0], buffer, sizeof(buffer) - 1)) >
+           0) {
       buffer[bytesRead] = '\0';
-      responseContent = buffer;
-    } else {
+      responseContent += buffer;
+    }
+
+    if (bytesRead == -1) {
       responseStatus = 500;
       responseContent = "CGI script error";
     }
-
     close(pipe_response[0]);
+
+    size_t pos = responseContent.find("\r\n\r\n");
+    if (pos == std::string::npos) {
+      responseStatus = 500;
+      responseContent = "Malformed CGI response";
+      return;
+    }
+    std::string cgi_headers = responseContent.substr(0, pos);
+    responseContent = responseContent.substr(pos + 4);
+
+    std::istringstream headerStream(cgi_headers);
+    std::string line;
+    std::map<std::string, std::string> headers_map;
+    while (std::getline(headerStream, line) && !line.empty()) {
+      if (!line.empty() && *(line.rbegin()) == '\r') {
+        line.erase(line.size() - 1);
+      }
+
+      if (line.find("Status:") == 0) {
+        std::string statusCode = line.substr(7);
+        responseStatus = std::atoi(statusCode.c_str());
+      }
+    }
     waitpid(pid, NULL, 0);
   }
 }
