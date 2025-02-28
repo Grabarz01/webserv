@@ -4,7 +4,6 @@ namespace {
 enum ParameterType {
   PARAM_LISTEN,
   PARAM_SERVER_NAMES,
-  PARAM_HOST,
   PARAM_LOCATION,
   PARAM_UNKNOWN,
   PARAM_ROUTE_ALLOWED_METH,
@@ -20,8 +19,6 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_LISTEN;
   else if (param == "serverNames")
     return PARAM_SERVER_NAMES;
-  else if (param == "host")
-    return PARAM_HOST;
   else if (param == "location")
     return PARAM_LOCATION;
   else if (param == "allowedMethods")
@@ -101,6 +98,15 @@ void parseRoute(ConfigTypes::ServerConfig& server,
   throw std::runtime_error("Configuration file: expected closing bracket");
 }
 
+void setDefaultValues(ConfigTypes::ServerConfig& server) {
+  if (server.hostPortPairs.empty())
+    server.hostPortPairs.insert("0.0.0.0:80");
+  if (server.defaultRoute.allowedMethods.empty()) {
+    server.defaultRoute.allowedMethods.insert("GET");
+    server.defaultRoute.allowedMethods.insert("POST");
+  }
+}
+
 void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
   std::string line;
   while (std::getline(file, line)) {
@@ -116,19 +122,18 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
     ParameterType type = getParameterType(parameter);
     switch (type) {
       case PARAM_LISTEN: {
-        server.ports.clear();
-        unsigned int port;
-        while (iss >> port)
-          server.ports.insert(port);
+        std::string temp;
+        iss >> temp;
+        if (temp.find(':') == std::string::npos)
+          throw std::runtime_error(
+              "Configuration file: invalid host:port definition: " + temp);
+        server.hostPortPairs.insert(temp);
       } break;
       case PARAM_SERVER_NAMES: {
         std::string serverName;
         while (iss >> serverName)
           server.serverNames.insert(serverName);
       } break;
-      case PARAM_HOST:
-        iss >> server.host;
-        break;
       case PARAM_LOCATION:
         parseRoute(server, iss, file);
         break;
@@ -161,9 +166,10 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
                                    temp);
         server.defaultRoute.autoindex = (temp == "on");
       } break;
-      case PARAM_CLOSING_BRACKET:
+      case PARAM_CLOSING_BRACKET: {
+        setDefaultValues(server);
         return;
-        break;
+      } break;
       default:
         throw std::runtime_error(
             "Configuration file: unexpected parameter in server: " + parameter);
@@ -173,14 +179,6 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
 }
 
 }  // namespace
-
-ConfigTypes::ServerConfig::ServerConfig() : host("0.0.0.0") {
-  ports.insert(80);
-  // defaultRoute.index = "index.html";
-  defaultRoute.allowedMethods.insert("GET");
-  defaultRoute.allowedMethods.insert("POST");
-  // defaultRoute.allowedMethods.insert("DELETE");
-}
 
 void Config::loadFromFile(const std::string& path) {
   std::ifstream file(path.c_str());
@@ -198,36 +196,39 @@ void Config::loadFromFile(const std::string& path) {
     } else
       throw std::runtime_error("Unexpected line in configuration file");
   }
-  setPorts();
+  setHostPortPairsForConfig();
 };
 
 ConfigTypes::ServerConfig& Config::getServerConfig(
-    const std::string& serverName,
-    const std::string& port) {
-  unsigned int portInt;
-  std::istringstream iss(port);
-  if (!(iss >> portInt))
-    throw std::runtime_error("Internal error: cannot convert str to int");
+    const std::string& portHostPair,
+    const std::string& serverName) {
   std::vector<ConfigTypes::ServerConfig>::iterator it = servers.begin();
   for (; it != servers.end(); it++) {
-    if (it->ports.find(portInt) != it->ports.end() &&
-        it->serverNames.find(serverName) != it->serverNames.end()) {
+    if (it->hostPortPairs.find(portHostPair) != it->hostPortPairs.end()) {
+      if (it->serverNames.find(serverName) != it->serverNames.end())
+        return *it;
+    }
+  }
+  // if server with matching portHostPair and serverName not found, try to
+  // return first server with matching portHostPair
+  for (it = servers.begin(); it != servers.end(); it++) {
+    if (it->hostPortPairs.find(portHostPair) != it->hostPortPairs.end())
       return *it;
-    }
   }
-  throw std::runtime_error("No configuration found for the specified server");
+  throw std::runtime_error("No configuration found for host:port " +
+                           portHostPair);
 }
 
-void Config::setPorts() {
+void Config::setHostPortPairsForConfig() {
   std::vector<ConfigTypes::ServerConfig>::iterator it = servers.begin();
   for (; it != servers.end(); it++) {
-    std::set<unsigned int>::iterator it2 = it->ports.begin();
-    for (; it2 != it->ports.end(); it2++) {
-      ports.insert(*it2);
+    std::set<std::string>::iterator it2 = it->hostPortPairs.begin();
+    for (; it2 != it->hostPortPairs.end(); it2++) {
+      hostPortPairsForConfig.insert(*it2);
     }
   }
 }
 
-const std::set<unsigned int>& Config::getPorts() const {
-  return ports;
+const std::set<std::string>& Config::getHostPortPairsForConfig() const {
+  return hostPortPairsForConfig;
 }
