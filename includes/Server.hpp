@@ -5,6 +5,8 @@
 #include <set>
 #include <string>
 #include <vector>
+#include "Config.hpp"
+
 class Server {
  public:
   Server();
@@ -17,7 +19,7 @@ class Server {
   void setHostPortPairs(const std::set<std::string>& hostPortPairs);
   void setServer(void);
   void addFD(pollfd fd);
-  void serverListen(void);
+  void serverListen(Config &conf);
 
  private:
   std::set<std::string> hostPortPairs;

@@ -50,12 +50,18 @@ void RequestHandler::printRequest() {
   std::cout << body << std::endl;
 }
 
-void RequestHandler::handleRequest() {
-  // sprawdzam lokalizacje i zwrzam jej ustawienia
-  if (!availabilityCheck())  // dane z serwera jesli z sa w danej lokacji to to
-                             // jezeli nie to default
-  {
-    throw std::runtime_error("Method not allowed");
+void RequestHandler::handleRequest(Config& conf) {
+  // fjalowiec - czy tu ma byc w hostportpair ip:port a w servername string z
+  // zapytania np. Host: localhost:8080 to servername = localhost? jesli tak to
+  // mozesz to tu ustawic
+//   hostport = headers["HOST"];
+//   ConfigTypes::ServerConfig serv_conf =
+//       conf.getServerConfig(hostport, hostport);
+//   ConfigTypes::RouteConfig rout_conf = getLocationConfig(
+//       serv_conf);  // fjalowiec - we to zaimplementuj na samym dole zacząłem
+  if (!availabilityCheck(/*fjalowiec - przekazanie allowed methods*/)) {
+    responseStatus = 405;
+    throw std::runtime_error("Method not Allowed");
   } else if (method == "GET") {
     getReq();
   } else if (method == "POST") {
@@ -63,6 +69,7 @@ void RequestHandler::handleRequest() {
   } else if (method == "DELETE") {
     deleteReq();
   } else {
+    responseStatus = 501;
     throw std::runtime_error("Method not implemented");
   }
 }
@@ -331,4 +338,29 @@ void RequestHandler::deleteReq(void) {
       return;
     }
   }
+}
+
+// najelpiej bedzie jak zwroci referencje do zmiennej gdzie beda zapisane
+// zmienne lokacji a jak sa puste to biore z serverconfiga defaultowe dla danego
+// servera
+ConfigTypes::RouteConfig RequestHandler::getLocationConfig(
+    ConfigTypes::ServerConfig& server_conf) {
+  std::string cur_location = path;
+  ConfigTypes::RouteConfig route_config;
+
+  size_t pos_query = cur_location.find('?');
+  size_t pos_py = cur_location.find(".py");
+
+  if (*(cur_location.rbegin()) != '/')
+    ;
+  else if (pos_py != std::string::npos) {
+    cur_location = cur_location.substr(0, pos_py);
+    cur_location = cur_location.substr(0, cur_location.find_last_of("/"));
+  } else
+    cur_location = ((pos_query != std::string::npos)
+                        ? (cur_location.substr(0, pos_query))
+                        : cur_location);
+
+  //masz aktualna lokacje chyba git i ja tylko sprawdzic
+  return route_config;
 }

@@ -8,6 +8,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "Config.hpp"
 
 class RequestHandler {
  private:
@@ -18,23 +19,25 @@ class RequestHandler {
   std::map<std::string, std::string> headers;
   std::string body;
   std::string responseContent;
+  std::string hostport;
   unsigned int responseStatus;
-	long conLen;
+  long conLen;
   void parseRequest();
 
-  //methods
+  // methods
   void getReq(void);
   void getCgiHandler(size_t pos_py, size_t pos_query);
   void postReq(void);
   void deleteReq(void);
   bool availabilityCheck(void);
-  void getLocationConfig(void);
-  
+  ConfigTypes::RouteConfig getLocationConfig(
+      ConfigTypes::ServerConfig& server_conf);
+
  public:
   RequestHandler(std::string rawRequest);
   ~RequestHandler();
 
-  void handleRequest();
+  void handleRequest(Config& conf);
   void printRequest();
 
   const std::string& getRawRequest() const;

@@ -12,6 +12,7 @@
 #include <vector>
 #include "HttpResponse.hpp"
 #include "RequestHandler.hpp"
+#include "Config.hpp"
 
 namespace {
 void setHostAndPort(const std::string& hostPortPair,
@@ -99,7 +100,7 @@ void Server::setServer(void) {
   std::cout << "Server listens for that poor messages from u" << std::endl;
 }
 
-void Server::serverListen(void) {
+void Server::serverListen(Config &conf) {
   fds.reserve(100);
   while (true) {
     int i = poll(&fds[0], fds.size(), 0);
@@ -137,7 +138,7 @@ void Server::serverListen(void) {
           } else {
             std::string reqStr(buffer, bytes_received);
             RequestHandler request(reqStr);
-            request.handleRequest();
+            request.handleRequest(conf);
 
             HttpResponse response;
             response.setStatus(request.getResponseStatus());
