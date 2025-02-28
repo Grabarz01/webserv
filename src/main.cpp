@@ -8,21 +8,25 @@
 #include <cstring>
 #include <iostream>
 #include <vector>
-#include "Server.hpp"
 #include "Config.hpp"
+#include "Server.hpp"
 
-int main() {
+int main(int argc, char** argv) {
+  if (argc == 1) {
+    std::cerr << "Please provide a path to a configuration file" << std::endl;
+    return 1;
+  }
+  if (argc != 2) {
+    std::cerr << "Error: invalid configuration file path" << std::endl;
+    return 1;
+  }
+
   try {
     Config conf;
-    conf.loadFromFile("example_files/webserv.conf");
-    
+    conf.loadFromFile(argv[1]);
+
     Server server;
-    std::set<unsigned int> ports = conf.getPorts();
-    std::set<unsigned int>::const_iterator it = ports.begin();
-    for (; it != ports.end(); it++) {
-      // std::cout << *it << std::endl;
-      server.addPort(*it);
-    }
+    server.setHostPortPairs(conf.getHostPortPairsForConfig());
     server.setServer();
     server.serverListen();
   } catch (const std::exception& e) {

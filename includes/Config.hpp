@@ -22,13 +22,10 @@ namespace ConfigTypes {
   };
   
   struct ServerConfig {
-    std::set<unsigned int> ports;
-    std::string host;
+    std::set<std::string> hostPortPairs;
     std::set<std::string> serverNames;
     RouteConfig defaultRoute;
     std::map<std::string, RouteConfig> routes;
-
-    ServerConfig();
   };
 }
 
@@ -36,13 +33,13 @@ class Config {
  public:
   void loadFromFile(const std::string& path);
   ConfigTypes::ServerConfig& getServerConfig(const std::string& serverName, const std::string& port);
-  const std::set<unsigned int>& getPorts() const;
+  const std::set<std::string>& getHostPortPairsForConfig() const;
 
  private:
   std::vector<ConfigTypes::ServerConfig> servers;
-  std::set<unsigned int> ports;
+  std::set<std::string> hostPortPairsForConfig;
 
-  void setPorts();
+  void setHostPortPairsForConfig();
 
 };
 
