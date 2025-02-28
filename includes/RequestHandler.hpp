@@ -24,6 +24,7 @@ class RequestHandler {
 
   //methods
   void getReq(void);
+  void getCgiHandler(size_t pos_py, size_t pos_query);
   void postReq(void);
   void deleteReq(void);
   bool availabilityCheck(void);
