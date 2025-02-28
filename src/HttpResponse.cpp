@@ -44,6 +44,9 @@ void HttpResponse::setStatusLine() {
     case 404:
       statusLine = "HTTP/1.1 404 Not Found\r\n";
       break;
+    case 403:
+      statusLine = "HTTP/1.1 403 Permission denied\r\n";
+      break;
   }
 }
 

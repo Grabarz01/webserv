@@ -308,5 +308,27 @@ void RequestHandler::postReq() {
 }
 
 void RequestHandler::deleteReq(void) {
-  throw std::runtime_error("Method not implemented");
+  if (path.empty()) {
+    responseStatus = 404;
+    return;
+  }
+  if (path[0] == '/') {
+    path.erase(path.begin());
+  }
+  std::cout << path << std::endl;
+  if (remove(path.c_str()) == 0) {
+    responseStatus = 200;
+    responseContent = "File deleted successfully";
+    conLen = 26;
+    return;
+  } else {
+    if (access(path.c_str(), F_OK) != 0) {
+      responseStatus = 404;
+      return;
+    }
+    if (access(path.c_str(), W_OK) != 0) {
+      responseStatus = 403;
+      return;
+    }
+  }
 }
