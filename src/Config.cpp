@@ -5,12 +5,14 @@ enum ParameterType {
   PARAM_LISTEN,
   PARAM_SERVER_NAMES,
   PARAM_LOCATION,
+  PARAM_CGIPATH,
   PARAM_UNKNOWN,
   PARAM_ROUTE_ALLOWED_METH,
   PARAM_ROUTE_ROOT,
   PARAM_ROUTE_INDEX,
   PARAM_ROUTE_RETURN,
   PARAM_ROUTE_AUTOINDEX,
+  PARAM_ROUTE_CGIALLOWEDEXT,
   PARAM_CLOSING_BRACKET
 };
 
@@ -21,6 +23,8 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_SERVER_NAMES;
   else if (param == "location")
     return PARAM_LOCATION;
+  else if (param =="cgiPath")
+    return PARAM_CGIPATH;
   else if (param == "allowedMethods")
     return PARAM_ROUTE_ALLOWED_METH;
   else if (param == "root")
@@ -31,6 +35,8 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_ROUTE_RETURN;
   else if (param == "autoindex")
     return PARAM_ROUTE_AUTOINDEX;
+  else if (param == "cgiAllowedExtensions")
+    return PARAM_ROUTE_CGIALLOWEDEXT;
   else if (param == "}")
     return PARAM_CLOSING_BRACKET;
   else
@@ -76,7 +82,7 @@ void parseRoute(ConfigTypes::ServerConfig& server,
       case PARAM_ROUTE_RETURN: {
         std::string temp;
         while (routeIss >> temp)
-          server.defaultRoute.redirect.push_back(temp);
+          route.redirect.push_back(temp);
       } break;
       case PARAM_ROUTE_AUTOINDEX: {
         std::string temp;
@@ -84,7 +90,15 @@ void parseRoute(ConfigTypes::ServerConfig& server,
         if (temp != "off" && temp != "on")
           throw std::runtime_error(
               "Configuration file: incorrect autoindex value: " + temp);
-        server.defaultRoute.autoindex = (temp == "on");
+        route.autoindex = (temp == "on");
+      } break;
+      case PARAM_ROUTE_CGIALLOWEDEXT: {
+        std::string temp;
+        while (routeIss >> temp) {
+          if (temp != ".py")
+            throw std::runtime_error("Configuration file: cgi extension " + temp + " not allowed");
+          route.cgiAllowedExtensions.push_back(temp);
+        }
       } break;
       case PARAM_CLOSING_BRACKET: {
         server.routes[routePath] = route;
@@ -137,6 +151,9 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
       case PARAM_LOCATION:
         parseRoute(server, iss, file);
         break;
+      case PARAM_CGIPATH:
+        iss >> server.cgiPath;
+        break;
       case PARAM_ROUTE_ALLOWED_METH: {
         std::string allowedMethod;
         while (iss >> allowedMethod) {
@@ -165,6 +182,14 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
           throw std::runtime_error("Configuration file: incorrect autoindex: " +
                                    temp);
         server.defaultRoute.autoindex = (temp == "on");
+      } break;
+      case PARAM_ROUTE_CGIALLOWEDEXT: {
+        std::string temp;
+        while (iss >> temp) {
+          if (temp != ".py")
+            throw std::runtime_error("Configuration file: cgi extension " + temp + " not allowed");
+          server.defaultRoute.cgiAllowedExtensions.push_back(temp);
+        }
       } break;
       case PARAM_CLOSING_BRACKET: {
         setDefaultValues(server);

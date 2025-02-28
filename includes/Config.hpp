@@ -18,12 +18,14 @@ namespace ConfigTypes {
     std::string index;
     bool autoindex;
     std::set<std::string> allowedMethods;
+    std::vector<std::string> cgiAllowedExtensions;
     std::vector<std::string> redirect;
   };
   
   struct ServerConfig {
     std::set<std::string> hostPortPairs;
     std::set<std::string> serverNames;
+    std::string cgiPath;
     RouteConfig defaultRoute;
     std::map<std::string, RouteConfig> routes;
   };
@@ -32,7 +34,7 @@ namespace ConfigTypes {
 class Config {
  public:
   void loadFromFile(const std::string& path);
-  ConfigTypes::ServerConfig& getServerConfig(const std::string& serverName, const std::string& port);
+  ConfigTypes::ServerConfig& getServerConfig(const std::string& hostPortPair, const std::string& serverName);
   const std::set<std::string>& getHostPortPairsForConfig() const;
 
  private:
