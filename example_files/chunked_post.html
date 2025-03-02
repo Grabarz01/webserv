@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chunked POST</title>
+</head>
+<body>
+<h1>Chunked POST</h1>
+<textarea id="data" placeholder="Twoje dane..."></textarea>
+<button onclick="sendChunked()">Wyślij</button>
+
+<script>
+async function sendChunked() {
+  let data = document.getElementById("data").value;
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    start(controller) {
+      let chunks = data.match(/.{1,4}/g) || []; // Podziel na kawałki po 4 bajty
+      chunks.forEach(chunk => {
+        controller.enqueue(encoder.encode(chunk));
+      });
+      controller.close();
+    }
+  });
+
+  let response = await fetch("http://localhost:8080/example_files/hello.py", {
+    method: "POST",
+    headers: {
+      "Transfer-Encoding": "chunked",
+      "Content-Type": "text/plain"
+    },
+    body: stream
+  });
+
+  let text = await response.text();
+  console.log(text);
+}
+</script>
+</body>
+</html>

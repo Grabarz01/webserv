@@ -39,6 +39,7 @@ class RequestHandler {
 
   void handleRequest(Config& conf);
   void printRequest();
+  void autoIndex();
 
   const std::string& getRawRequest() const;
   const std::string& getResponseContent() const;
