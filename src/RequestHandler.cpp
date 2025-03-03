@@ -16,6 +16,9 @@ void copyDefaultValuesToRouteConfig(ConfigTypes::RouteConfig& routeConfig,
     routeConfig.redirect = serverConfig.defaultRoute.redirect;
 }
 }  // namespace
+#include <dirent.h>
+#include <cstring>   
+#include <sstream> 
 
 RequestHandler::RequestHandler(std::string rawRequest)
     : rawRequest(rawRequest), responseStatus(200) {
@@ -35,11 +38,38 @@ void RequestHandler::parseRequest() {
     if (std::getline(header_stream, key, ':')) {
       std::string value;
       std::getline(header_stream, value);
-      headers[key] = value.substr(1);
+      value.erase(0, value.find_first_not_of(" \t\r\n"));
+	  value.erase(value.find_last_not_of(" \t\r\n") + 1);
+      headers[key] = value;
     }
   }
 
-  if (headers.find("Content-Length") != headers.end()) {
+  if (headers.find("Transfer-Encoding") != headers.end() &&
+      headers["Transfer-Encoding"] == "chunked") {
+    std::string chunk_size_str;
+    while (std::getline(req, chunk_size_str) && chunk_size_str != "\r") {
+      if (!chunk_size_str.empty() &&
+          chunk_size_str[chunk_size_str.size() - 1] == '\r') {
+        chunk_size_str.erase(chunk_size_str.size() - 1);
+      }
+
+      int chunk_size = std::strtol(chunk_size_str.c_str(), NULL, 16);
+      std::cerr << "Chunk Size: " << chunk_size << std::endl;
+
+      if (chunk_size == 0) {
+        break;
+      }
+      std::string chunk(chunk_size, '\0');
+      req.read(&chunk[0], chunk_size);
+      body += chunk;
+
+      std::getline(req, chunk_size_str);
+    }
+
+    std::ostringstream len_stream;
+    len_stream << body.size();
+    headers["Content-Length"] = len_stream.str();
+  } else if (headers.find("Content-Length") != headers.end()) {
     conLen = std::atoi(headers["Content-Length"].c_str());
     if (conLen > 0) {
       body.resize(conLen);
@@ -400,6 +430,41 @@ void RequestHandler::deleteReq(void) {
 //         pos_query))
 //                                           : cur_location);
 
-//   // masz aktualna lokacje chyba git i ja tylko sprawdzic
+//   //  masz aktualna lokacje chyba git i ja tylko sprawdzic
 //   return route_config;
 // }
+
+void RequestHandler::autoIndex()
+{
+	char dirPath[] = "/";
+    DIR* dir = opendir(dirPath);
+    std::string responseContent;
+
+    if (dir == NULL) {
+        responseContent += "<html><body><h2>Error: Directory not found or cannot be opened.</h2></body></html>";
+        responseStatus = 404;
+		return;
+    }
+
+    responseContent += "<html><body><h2>Directory Listing: " + std::string(dirPath) + "</h2><ul>";
+
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != NULL) {
+        std::string entryName = entry->d_name;
+
+        if (entryName == "." || entryName == "..") {
+            continue;
+        }
+
+        if (entry->d_type == DT_DIR) {
+            responseContent += "<li><a href=\"" + entryName + "/\">" + entryName + "/</a></li>";
+        } else {  
+            responseContent += "<li><a href=\"" + entryName + "\">" + entryName + "</a></li>";
+        }
+    }
+
+    responseContent += "</ul></body></html>";
+	responseStatus = 200;
+    closedir(dir);
+}

@@ -45,6 +45,7 @@ class RequestHandler {
 
   void handleRequest(ConfigTypes::ServerConfig& server);
   void printRequest();
+  void autoIndex();
 
   const std::string& getRawRequest() const;
   const std::string& getResponseContent() const;
