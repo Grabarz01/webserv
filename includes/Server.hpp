@@ -9,22 +9,25 @@
 
 class Server {
  public:
-  Server();
+  Server(Config& serversConfig);
   Server(const Server& other);
   ~Server();
 
   const Server& operator=(const Server& other);
 
   static void setNonblocking(int socket);
-  void setHostPortPairs(const std::set<std::string>& hostPortPairs);
   void setServer(void);
   void addFD(pollfd fd);
-  void serverListen(Config &conf);
-
- private:
-  std::set<std::string> hostPortPairs;
+  void serverListen();
+  
+  private:
+  Config& serversConfig;
+  std::vector<std::string> hostPortPairs;
   std::vector<std::string> serverNames;
   std::vector<pollfd> fds;
+  std::map<int, size_t> clientToServerIndex;
+
+  void setHostPortPairs(const std::set<std::string>& hostPortPairs);
 };
 
 #endif

@@ -1,9 +1,21 @@
 #include "RequestHandler.hpp"
-#include <stdio.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <string>
-#include "Cgi.hpp"
+
+namespace {
+void copyDefaultValuesToRouteConfig(ConfigTypes::RouteConfig& routeConfig,
+                                    ConfigTypes::ServerConfig& serverConfig) {
+  if (routeConfig.root.empty())
+    routeConfig.root = serverConfig.defaultRoute.root;
+  if (routeConfig.index.empty())
+    routeConfig.index = serverConfig.defaultRoute.index;
+  if (routeConfig.allowedMethods.empty())
+    routeConfig.allowedMethods = serverConfig.defaultRoute.allowedMethods;
+  if (routeConfig.cgiAllowedExtensions.empty())
+    routeConfig.cgiAllowedExtensions =
+        serverConfig.defaultRoute.cgiAllowedExtensions;
+  if (routeConfig.redirect.empty())
+    routeConfig.redirect = serverConfig.defaultRoute.redirect;
+}
+}  // namespace
 
 RequestHandler::RequestHandler(std::string rawRequest)
     : rawRequest(rawRequest), responseStatus(200) {
@@ -36,6 +48,37 @@ void RequestHandler::parseRequest() {
   }
 }
 
+void RequestHandler::setRouteConfig(ConfigTypes::ServerConfig& serverConfig) {
+  std::string route = path;
+  size_t queryPos = route.find("?");
+  if (queryPos != std::string::npos) {
+    route = route.substr(0, queryPos);
+  }
+  std::cout << route << std::endl;
+  while (route != "/") {
+    if (serverConfig.routes.find(route) != serverConfig.routes.end()) {
+      std::map<std::string, ConfigTypes::RouteConfig>::iterator it;
+      it = serverConfig.routes.find(route);
+      std::string routePath = it->first;
+      routeConfig = it->second;
+      std::cout << "used route: " << routePath << std::endl;
+      copyDefaultValuesToRouteConfig(routeConfig, serverConfig);
+      return;
+    } else {
+      size_t slashPos = route.find_last_of('/');
+      if (slashPos == std::string::npos || slashPos == 0)
+        route = "/";
+      route = route.substr(0, slashPos);
+    }
+  }
+  if (serverConfig.routes.find("/") != serverConfig.routes.end()) {
+    routeConfig = serverConfig.routes.find("/")->second;
+    std::cout << "used route: /" << std::endl;
+  } else {
+    responseStatus = 404;
+  }
+}
+
 const std::string& RequestHandler::getRawRequest() const {
   return rawRequest;
 }
@@ -50,18 +93,13 @@ void RequestHandler::printRequest() {
   std::cout << body << std::endl;
 }
 
-void RequestHandler::handleRequest(Config& conf) {
-  // fjalowiec - czy tu ma byc w hostportpair ip:port a w servername string z
-  // zapytania np. Host: localhost:8080 to servername = localhost? jesli tak to
-  // mozesz to tu ustawic
-//   hostport = headers["HOST"];
-//   ConfigTypes::ServerConfig serv_conf =
-//       conf.getServerConfig(hostport, hostport);
-//   ConfigTypes::RouteConfig rout_conf = getLocationConfig(
-//       serv_conf);  // fjalowiec - we to zaimplementuj na samym dole zacząłem
-  if (!availabilityCheck(/*fjalowiec - przekazanie allowed methods*/)) {
+void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
+  setRouteConfig(server);
+  std::cout << routeConfig.index << std::endl;
+  if (routeConfig.allowedMethods.find(method) ==
+      routeConfig.allowedMethods.end()) {
     responseStatus = 405;
-    throw std::runtime_error("Method not Allowed");
+    // throw std::runtime_error("Method not Allowed");
   } else if (method == "GET") {
     getReq();
   } else if (method == "POST") {
@@ -70,7 +108,7 @@ void RequestHandler::handleRequest(Config& conf) {
     deleteReq();
   } else {
     responseStatus = 501;
-    throw std::runtime_error("Method not implemented");
+    // throw std::runtime_error("Method not implemented");
   }
 }
 
@@ -82,15 +120,15 @@ const unsigned int RequestHandler::getResponseStatus() const {
   return responseStatus;
 }
 
-bool RequestHandler::availabilityCheck(void)  // serwerconfig
-{
-  /*if(server.stack.empty())
-          return true;
-  if(stack.find(<std::string>method) != set.end())
-          return true
-  */
-  return true;
-}
+// bool RequestHandler::availabilityCheck(void)  // serwerconfig
+// {
+//   /*if(server.stack.empty())
+//           return true;
+//   if(stack.find(<std::string>method) != set.end())
+//           return true
+//   */
+//   return true;
+// }
 
 void RequestHandler::getReq(void) {
   size_t pos_py = path.find(".py");
@@ -343,24 +381,25 @@ void RequestHandler::deleteReq(void) {
 // najelpiej bedzie jak zwroci referencje do zmiennej gdzie beda zapisane
 // zmienne lokacji a jak sa puste to biore z serverconfiga defaultowe dla danego
 // servera
-ConfigTypes::RouteConfig RequestHandler::getLocationConfig(
-    ConfigTypes::ServerConfig& server_conf) {
-  std::string cur_location = path;
-  ConfigTypes::RouteConfig route_config;
+// ConfigTypes::RouteConfig& RequestHandler::getRouteConfig(
+//     ConfigTypes::ServerConfig& serverConfig) {
+//   std::string cur_location = path;
+//   ConfigTypes::RouteConfig route_config;
 
-  size_t pos_query = cur_location.find('?');
-  size_t pos_py = cur_location.find(".py");
+//   size_t pos_query = cur_location.find('?');
+//   size_t pos_py = cur_location.find(".py");
 
-  if (*(cur_location.rbegin()) != '/')
-    ;
-  else if (pos_py != std::string::npos) {
-    cur_location = cur_location.substr(0, pos_py);
-    cur_location = cur_location.substr(0, cur_location.find_last_of("/"));
-  } else
-    cur_location = ((pos_query != std::string::npos)
-                        ? (cur_location.substr(0, pos_query))
-                        : cur_location);
+//   if (*(cur_location.rbegin()) != '/')
+//     ;
+//   else if (pos_py != std::string::npos) {
+//     cur_location = cur_location.substr(0, pos_py);
+//     cur_location = cur_location.substr(0, cur_location.find_last_of("/"));
+//   } else
+//     cur_location =
+//         ((pos_query != std::string::npos) ? (cur_location.substr(0,
+//         pos_query))
+//                                           : cur_location);
 
-  //masz aktualna lokacje chyba git i ja tylko sprawdzic
-  return route_config;
-}
+//   // masz aktualna lokacje chyba git i ja tylko sprawdzic
+//   return route_config;
+// }

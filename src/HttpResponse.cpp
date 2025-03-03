@@ -45,7 +45,13 @@ void HttpResponse::setStatusLine() {
       statusLine = "HTTP/1.1 404 Not Found\r\n";
       break;
     case 403:
-      statusLine = "HTTP/1.1 403 Permission denied\r\n";
+      statusLine = "HTTP/1.1 403 Permission Denied\r\n";
+      break;
+    case 405:
+      statusLine = "HTTP/1.1 405 Method Not Allowed\r\n";
+      break;
+    default:
+      statusLine = "HTTP/1.1 500 Internal Server Error\r\n";
       break;
   }
 }

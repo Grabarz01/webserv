@@ -25,10 +25,9 @@ int main(int argc, char** argv) {
     Config conf;
     conf.loadFromFile(argv[1]);
 
-    Server server;
-    server.setHostPortPairs(conf.getHostPortPairsForConfig());
+    Server server(conf);
     server.setServer();
-    server.serverListen(conf);
+    server.serverListen();
   } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return 1;

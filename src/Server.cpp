@@ -10,9 +10,9 @@
 #include <cstring>
 #include <iostream>
 #include <vector>
+#include "Config.hpp"
 #include "HttpResponse.hpp"
 #include "RequestHandler.hpp"
-#include "Config.hpp"
 
 namespace {
 void setHostAndPort(const std::string& hostPortPair,
@@ -37,10 +37,14 @@ void setHostAndPort(const std::string& hostPortPair,
 }
 }  // namespace
 
-Server::Server() {}
+Server::Server(Config& serversConfig) : serversConfig(serversConfig) {
+  setHostPortPairs(serversConfig.getHostPortPairsForConfig());
+}
 
 Server::Server(const Server& other)
-    : hostPortPairs(other.hostPortPairs), serverNames(other.serverNames) {}
+    : serversConfig(other.serversConfig),
+      hostPortPairs(other.hostPortPairs),
+      serverNames(other.serverNames) {}
 
 Server::~Server() {}
 
@@ -58,7 +62,9 @@ void Server::setNonblocking(int socket) {
 }
 
 void Server::setHostPortPairs(const std::set<std::string>& hostPortPairs) {
-  this->hostPortPairs = hostPortPairs;
+  std::set<std::string>::iterator it = hostPortPairs.begin();
+  for (; it != hostPortPairs.end(); it++)
+    this->hostPortPairs.push_back(*it);
 }
 
 void Server::addFD(pollfd fd) {
@@ -68,7 +74,7 @@ void Server::addFD(pollfd fd) {
 void Server::setServer(void) {
   if (hostPortPairs.empty())
     throw std::runtime_error("Server failed: no host:port provided");
-  std::set<std::string>::iterator it;
+  std::vector<std::string>::iterator it;
   for (it = hostPortPairs.begin(); it != hostPortPairs.end(); ++it) {
     std::string host;
     unsigned int port;
@@ -100,11 +106,10 @@ void Server::setServer(void) {
   std::cout << "Server listens for that poor messages from u" << std::endl;
 }
 
-void Server::serverListen(Config &conf) {
+void Server::serverListen() {
   fds.reserve(100);
   while (true) {
-    int i = poll(&fds[0], fds.size(), 0);
-    if (i < 0)
+    if (poll(&fds[0], fds.size(), 0) < 0)
       throw std::runtime_error(std::string("Poll error") +
                                std::string(strerror(errno)));
     std::vector<pollfd>::iterator fd_it = fds.begin();
@@ -114,15 +119,15 @@ void Server::serverListen(Config &conf) {
           // Nowe połączenie
           int client_fd = accept(fd_it->fd, NULL, NULL);
           if (client_fd >= 0) {
+            size_t serverIndex = std::distance(fds.begin(), fd_it);
             setNonblocking(client_fd);
             pollfd client_pfd = {client_fd, POLLIN, 0};
-
             fds.push_back(client_pfd);
-            std::cout << "Nowe połączenie na porcie "
-                      // << *(ports.begin() + std::distance(fds.begin(), fd_it))
-                      << "\n";
+            clientToServerIndex[client_fd] = serverIndex;
+            std::cout << "New connection for host:port "
+                      << *(hostPortPairs.begin() + serverIndex) << "\n";
           } else
-            throw std::runtime_error(std::string("Acceot error") +
+            throw std::runtime_error(std::string("Accept error") +
                                      std::string(strerror(errno)));
         } else {
           // Dane od klienta
@@ -136,20 +141,34 @@ void Server::serverListen(Config &conf) {
             fd_it = fds.erase(fd_it);
             continue;
           } else {
-            std::string reqStr(buffer, bytes_received);
-            RequestHandler request(reqStr);
-            request.handleRequest(conf);
-
+            std::string clientRequest(buffer, bytes_received);
+            std::string serverName;
+            size_t hostPos = clientRequest.find("Host: ");
+            if (hostPos != std::string::npos) {
+              size_t startPos = hostPos + 6;
+              size_t endPos = clientRequest.find_first_of(":\n", startPos);
+              serverName = clientRequest.substr(startPos, endPos - startPos);
+              std::cout << serverName << std::endl;
+            }
+            std::string hostPortPair =
+                hostPortPairs.at(clientToServerIndex.at(fd_it->fd));
+            std::cout << "Getting config for: " << hostPortPair
+                      << " and serverName " << serverName << std::endl;
+            ConfigTypes::ServerConfig server =
+                serversConfig.getServerConfig(hostPortPair, serverName);
+            RequestHandler request(clientRequest);
+            request.handleRequest(server);
             HttpResponse response;
             response.setStatus(request.getResponseStatus());
             response.setBody(request.getResponseContent());
             response.generateResponse();
             const char* responseStr = response.getResponseAsString();
             int response_len = std::strlen(responseStr);
-            std::cout << "Odebrano: " << reqStr << "\n";
-            std::cout << "Wyslano: " << responseStr << "\n";
+            // std::cout << "Odebrano: \n" << clientRequest << "\n";
+            std::cout << "Wyslano: \n" << responseStr << "\n";
 
             send(fd_it->fd, responseStr, response_len, 0);
+            std::cout << "request received and responded" << std::endl;
           }
         }
       }
