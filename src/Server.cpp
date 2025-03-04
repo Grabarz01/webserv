@@ -114,75 +114,92 @@ void Server::serverListen() {
       throw std::runtime_error(std::string("Poll error") +
                                std::string(strerror(errno)));
     std::vector<pollfd>::iterator pollFdIt = pollFds.begin();
+
     while (pollFdIt != pollFds.end()) {
       if (pollFdIt->revents & POLLIN) {
         if (std::distance(pollFds.begin(), pollFdIt) < hostPortPairs.size()) {
           // New connection
-          int clientFd = accept(pollFdIt->fd, NULL, NULL);
-          if (clientFd < 0)
-            throw std::runtime_error(std::string("Accept error") +
-                                     std::string(strerror(errno)));
-          setNonblocking(clientFd);
-          pollfd clientPfd = {clientFd, POLLIN | POLLOUT, 0};
-          pollFds.push_back(clientPfd);
           size_t listenFdIndex = std::distance(pollFds.begin(), pollFdIt);
-          createIoSocketData(clientFd, listenFdIndex);
-
-          std::cout << "New connection for host:port "
-                    << *(hostPortPairs.begin() + listenFdIndex) << "\n";
+          createPollFd(*pollFdIt, hostPortPairs[listenFdIndex]);
         } else {
-          // Data received from client
-          char buffer[1024];
-          std::memset(buffer, 0, sizeof(buffer));
-          int bytes_received = recv(pollFdIt->fd, buffer, sizeof(buffer), 0);
-
-          if (bytes_received <= 0) {
-            std::cout << "Connection closed by client" << std::endl;
-            close(pollFdIt->fd);
-            clientFdToIoSocketData.erase(pollFdIt->fd);
-            pollFdIt = pollFds.erase(pollFdIt);
-            continue;
-          } else {
-            std::string clientRequest(buffer, bytes_received);
-            clientFdToIoSocketData.at(pollFdIt->fd).clientRequest =
-                clientRequest;
-            std::cout << "Request from "
-                      << clientFdToIoSocketData.at(pollFdIt->fd).hostPortPair
-                      << " received" << std::endl;
-            // std::cout << "Content: \n" << clientRequest << "\n";
-          }
+          pollFdIt = receiveDataFromClient(pollFdIt);
+          continue;
         }
       }
       if (pollFdIt->revents & POLLOUT) {
-        // Response to client
-        ioSocketData socket = clientFdToIoSocketData.at(pollFdIt->fd);
-        std::string serverName =
-            getHeaderValue(socket.clientRequest, "Host: ", ":\n");
-        std::cout << "Getting config for: " << socket.hostPortPair
-                  << " and serverName " << serverName << std::endl;
-
-        ConfigTypes::ServerConfig server =
-            serversConfig.getServerConfig(socket.hostPortPair, serverName);
-        RequestHandler request(socket.clientRequest);
-        request.handleRequest(server);
-
-        HttpResponse response;
-        response.setStatus(request.getResponseStatus());
-        response.setBody(request.getResponseContent());
-        response.generateResponse();
-
-        const char* responseStr = response.getResponseAsString();
-        int response_len = std::strlen(responseStr);
-
-        send(pollFdIt->fd, responseStr, response_len, 0);
-        pollFdIt->events = POLLIN;
-
-        std::cout << "Request responded" << std::endl;
-        // std::cout << "Content: \n" << responseStr << "\n";
+        sendDataToClient(*pollFdIt);
       }
       ++pollFdIt;
     }
   }
+}
+
+void Server::createPollFd(const pollfd listenFd, std::string& hostPortPair) {
+  int clientFd = accept(listenFd.fd, NULL, NULL);
+  if (clientFd < 0)
+    throw std::runtime_error(std::string("Accept error") +
+                             std::string(strerror(errno)));
+  setNonblocking(clientFd);
+  pollfd clientPfd = {clientFd, POLLIN | POLLOUT, 0};
+  pollFds.push_back(clientPfd);
+
+  createIoSocketData(clientFd, hostPortPair);
+
+  std::cout << "New connection for host:port " << hostPortPair << "\n";
+}
+
+void Server::createIoSocketData(int clientFd, std::string& hostPortPair) {
+  ioSocketData ioSocketData;
+  ioSocketData.hostPortPair = hostPortPair;
+  clientFdToIoSocketData[clientFd] = ioSocketData;
+}
+
+std::vector<pollfd>::iterator Server::receiveDataFromClient(
+    std::vector<pollfd>::iterator pollFdIt) {
+  char buffer[1024];
+  std::memset(buffer, 0, sizeof(buffer));
+  int bytes_received = recv(pollFdIt->fd, buffer, sizeof(buffer), 0);
+
+  if (bytes_received <= 0) {
+    std::cout << "Connection closed by client" << std::endl;
+    close(pollFdIt->fd);
+    clientFdToIoSocketData.erase(pollFdIt->fd);
+    return pollFds.erase(pollFdIt);
+  } else {
+    std::string clientRequest(buffer, bytes_received);
+    clientFdToIoSocketData.at(pollFdIt->fd).clientRequest = clientRequest;
+    std::cout << "Request from "
+              << clientFdToIoSocketData.at(pollFdIt->fd).hostPortPair
+              << " received" << std::endl;
+    return ++pollFdIt;
+  }
+}
+
+void Server::sendDataToClient(pollfd& clientFd) {
+  ioSocketData socket = clientFdToIoSocketData.at(clientFd.fd);
+  std::string serverName =
+      getHeaderValue(socket.clientRequest, "Host: ", ":\n");
+  std::cout << "Getting config for: " << socket.hostPortPair
+            << " and serverName " << serverName << std::endl;
+
+  ConfigTypes::ServerConfig server =
+      serversConfig.getServerConfig(socket.hostPortPair, serverName);
+  RequestHandler request(socket.clientRequest);
+  request.handleRequest(server);
+
+  HttpResponse response;
+  response.setStatus(request.getResponseStatus());
+  response.setBody(request.getResponseContent());
+  response.generateResponse();
+
+  const char* responseStr = response.getResponseAsString();
+  int response_len = std::strlen(responseStr);
+
+  send(clientFd.fd, responseStr, response_len, 0);
+  clientFd.events = POLLIN;
+
+  std::cout << "Request responded" << std::endl;
+  // std::cout << "Content: \n" << responseStr << "\n";
 }
 
 std::string Server::getHeaderValue(const std::string& clientRequest,
@@ -195,10 +212,4 @@ std::string Server::getHeaderValue(const std::string& clientRequest,
   size_t startPos = headerParPos + headerParameter.size();
   size_t endPos = clientRequest.find_first_of(endChars, startPos);
   return (clientRequest.substr(startPos, endPos - startPos));
-}
-
-void Server::createIoSocketData(int clientFd, size_t hostPortPairIndex) {
-  ioSocketData ioSocketData;
-  ioSocketData.hostPortPair = hostPortPairs.at(hostPortPairIndex);
-  clientFdToIoSocketData[clientFd] = ioSocketData;
 }

@@ -33,10 +33,15 @@ class Server {
   std::map<int, ioSocketData> clientFdToIoSocketData;
 
   void setHostPortPairs(const std::set<std::string>& hostPortPairs);
+  void createPollFd(const pollfd listenFd, std::string& hostPortPair);
+  void createIoSocketData(int clientFd, std::string& hostPortPair);
+  std::vector<pollfd>::iterator receiveDataFromClient(
+      std::vector<pollfd>::iterator pollFdIt);
+  void sendDataToClient(pollfd& clientFd);
+
   std::string getHeaderValue(const std::string& clientRequest,
                              const std::string& headerParameter,
                              const std::string& endChars);
-  void createIoSocketData(int clientFd, size_t hostPortPairIndex);
 };
 
 #endif
