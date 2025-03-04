@@ -23,7 +23,7 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_SERVER_NAMES;
   else if (param == "location")
     return PARAM_LOCATION;
-  else if (param =="cgiPath")
+  else if (param == "cgiPath")
     return PARAM_CGIPATH;
   else if (param == "allowedMethods")
     return PARAM_ROUTE_ALLOWED_METH;
@@ -96,7 +96,8 @@ void parseRoute(ConfigTypes::ServerConfig& server,
         std::string temp;
         while (routeIss >> temp) {
           if (temp != ".py")
-            throw std::runtime_error("Configuration file: cgi extension " + temp + " not allowed");
+            throw std::runtime_error("Configuration file: cgi extension " +
+                                     temp + " not allowed");
           route.cgiAllowedExtensions.push_back(temp);
         }
       } break;
@@ -187,7 +188,8 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
         std::string temp;
         while (iss >> temp) {
           if (temp != ".py")
-            throw std::runtime_error("Configuration file: cgi extension " + temp + " not allowed");
+            throw std::runtime_error("Configuration file: cgi extension " +
+                                     temp + " not allowed");
           server.defaultRoute.cgiAllowedExtensions.push_back(temp);
         }
       } break;
@@ -225,23 +227,27 @@ void Config::loadFromFile(const std::string& path) {
 };
 
 ConfigTypes::ServerConfig& Config::getServerConfig(
-    const std::string& portHostPair,
+    const std::string& HostPortPair,
     const std::string& serverName) {
   std::vector<ConfigTypes::ServerConfig>::iterator it = servers.begin();
   for (; it != servers.end(); it++) {
-    if (it->hostPortPairs.find(portHostPair) != it->hostPortPairs.end()) {
+    if (it->hostPortPairs.find(HostPortPair) != it->hostPortPairs.end()) {
       if (it->serverNames.find(serverName) != it->serverNames.end())
         return *it;
     }
   }
-  // if server with matching portHostPair and serverName not found, try to
-  // return first server with matching portHostPair
+  // if server with matching HostPortPair and serverName not found, try to
+  // return first server with matching HostPortPair
   for (it = servers.begin(); it != servers.end(); it++) {
-    if (it->hostPortPairs.find(portHostPair) != it->hostPortPairs.end())
-      return *it;
+    if (it->hostPortPairs.find(HostPortPair) != it->hostPortPairs.end()) {
+      std::cout << "No serverName " << serverName << " found for "
+                << HostPortPair << ". Returned first matching configuration."
+                << std::endl;
+    return *it;
+    }
   }
   throw std::runtime_error("No configuration found for host:port " +
-                           portHostPair);
+                           HostPortPair);
 }
 
 void Config::setHostPortPairsForConfig() {

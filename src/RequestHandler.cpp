@@ -84,7 +84,6 @@ void RequestHandler::setRouteConfig(ConfigTypes::ServerConfig& serverConfig) {
   if (queryPos != std::string::npos) {
     route = route.substr(0, queryPos);
   }
-  std::cout << route << std::endl;
   while (route != "/") {
     if (serverConfig.routes.find(route) != serverConfig.routes.end()) {
       std::map<std::string, ConfigTypes::RouteConfig>::iterator it;
