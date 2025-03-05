@@ -26,6 +26,7 @@ class HttpResponse {
 
   void setStatusLine();
   void setHeaders();
+  void setBodyForError();
 };
 
 #endif

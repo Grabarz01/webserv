@@ -161,16 +161,18 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
   int bytes_received = recv(pollFdIt->fd, buffer, sizeof(buffer), 0);
 
   if (bytes_received <= 0) {
-    std::cout << "Connection closed by client" << std::endl;
+    std::cout << "Connection closed by client\n" << std::endl;
     close(pollFdIt->fd);
     clientFdToIoSocketData.erase(pollFdIt->fd);
     return pollFds.erase(pollFdIt);
   } else {
     std::string clientRequest(buffer, bytes_received);
-    clientFdToIoSocketData.at(pollFdIt->fd).clientRequest = clientRequest;
+    clientFdToIoSocketData.at(pollFdIt->fd).clientRequest += clientRequest;
     std::cout << "Request from "
               << clientFdToIoSocketData.at(pollFdIt->fd).hostPortPair
               << " received" << std::endl;
+    if (!(pollFdIt->events & POLLOUT))
+      pollFdIt->events |= POLLOUT;
     return ++pollFdIt;
   }
 }
@@ -206,6 +208,7 @@ std::string Server::getHeaderValue(const std::string& clientRequest,
                                    const std::string& headerParameter,
                                    const std::string& endChars) {
   size_t headerParPos = clientRequest.find(headerParameter);
+  std::cout << "clientRequest: " << clientRequest << std::endl;
   if (headerParPos == std::string::npos)
     throw std::runtime_error("Server failure: parameter " + headerParameter +
                              " not found in a request header");
