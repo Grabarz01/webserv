@@ -1,5 +1,17 @@
 #include "RequestHandler.hpp"
 
+#include <dirent.h>
+#include <stdio.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include "Cgi.hpp"
+
 namespace {
 void copyDefaultValuesToRouteConfig(ConfigTypes::RouteConfig& routeConfig,
                                     ConfigTypes::ServerConfig& serverConfig) {
@@ -16,9 +28,6 @@ void copyDefaultValuesToRouteConfig(ConfigTypes::RouteConfig& routeConfig,
     routeConfig.redirect = serverConfig.defaultRoute.redirect;
 }
 }  // namespace
-#include <dirent.h>
-#include <cstring>   
-#include <sstream> 
 
 RequestHandler::RequestHandler(std::string rawRequest)
     : rawRequest(rawRequest), responseStatus(200) {
@@ -39,7 +48,7 @@ void RequestHandler::parseRequest() {
       std::string value;
       std::getline(header_stream, value);
       value.erase(0, value.find_first_not_of(" \t\r\n"));
-	  value.erase(value.find_last_not_of(" \t\r\n") + 1);
+      value.erase(value.find_last_not_of(" \t\r\n") + 1);
       headers[key] = value;
     }
   }
@@ -84,7 +93,9 @@ void RequestHandler::setRouteConfig(ConfigTypes::ServerConfig& serverConfig) {
   if (queryPos != std::string::npos) {
     route = route.substr(0, queryPos);
   }
+  std::cout << "receivedRoute: " << route << std::endl;
   while (route != "/") {
+    // std::cout << "loopRoute: " << route << std::endl;
     if (serverConfig.routes.find(route) != serverConfig.routes.end()) {
       std::map<std::string, ConfigTypes::RouteConfig>::iterator it;
       it = serverConfig.routes.find(route);
@@ -124,7 +135,7 @@ void RequestHandler::printRequest() {
 
 void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   setRouteConfig(server);
-  std::cout << routeConfig.index << std::endl;
+  // std::cout << routeConfig.index << std::endl;
   if (routeConfig.allowedMethods.find(method) ==
       routeConfig.allowedMethods.end()) {
     responseStatus = 405;
@@ -407,63 +418,41 @@ void RequestHandler::deleteReq(void) {
   }
 }
 
-// najelpiej bedzie jak zwroci referencje do zmiennej gdzie beda zapisane
-// zmienne lokacji a jak sa puste to biore z serverconfiga defaultowe dla danego
-// servera
-// ConfigTypes::RouteConfig& RequestHandler::getRouteConfig(
-//     ConfigTypes::ServerConfig& serverConfig) {
-//   std::string cur_location = path;
-//   ConfigTypes::RouteConfig route_config;
+void RequestHandler::autoIndex() {
+  char dirPath[] = "/";
+  DIR* dir = opendir(dirPath);
+  std::string responseContent;
 
-//   size_t pos_query = cur_location.find('?');
-//   size_t pos_py = cur_location.find(".py");
+  if (dir == NULL) {
+    responseContent +=
+        "<html><body><h2>Error: Directory not found or cannot be "
+        "opened.</h2></body></html>";
+    responseStatus = 404;
+    return;
+  }
 
-//   if (*(cur_location.rbegin()) != '/')
-//     ;
-//   else if (pos_py != std::string::npos) {
-//     cur_location = cur_location.substr(0, pos_py);
-//     cur_location = cur_location.substr(0, cur_location.find_last_of("/"));
-//   } else
-//     cur_location =
-//         ((pos_query != std::string::npos) ? (cur_location.substr(0,
-//         pos_query))
-//                                           : cur_location);
+  responseContent +=
+      "<html><body><h2>Directory Listing: " + std::string(dirPath) +
+      "</h2><ul>";
 
-//   //  masz aktualna lokacje chyba git i ja tylko sprawdzic
-//   return route_config;
-// }
+  struct dirent* entry;
+  while ((entry = readdir(dir)) != NULL) {
+    std::string entryName = entry->d_name;
 
-void RequestHandler::autoIndex()
-{
-	char dirPath[] = "/";
-    DIR* dir = opendir(dirPath);
-    std::string responseContent;
-
-    if (dir == NULL) {
-        responseContent += "<html><body><h2>Error: Directory not found or cannot be opened.</h2></body></html>";
-        responseStatus = 404;
-		return;
+    if (entryName == "." || entryName == "..") {
+      continue;
     }
 
-    responseContent += "<html><body><h2>Directory Listing: " + std::string(dirPath) + "</h2><ul>";
-
-
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != NULL) {
-        std::string entryName = entry->d_name;
-
-        if (entryName == "." || entryName == "..") {
-            continue;
-        }
-
-        if (entry->d_type == DT_DIR) {
-            responseContent += "<li><a href=\"" + entryName + "/\">" + entryName + "/</a></li>";
-        } else {  
-            responseContent += "<li><a href=\"" + entryName + "\">" + entryName + "</a></li>";
-        }
+    if (entry->d_type == DT_DIR) {
+      responseContent +=
+          "<li><a href=\"" + entryName + "/\">" + entryName + "/</a></li>";
+    } else {
+      responseContent +=
+          "<li><a href=\"" + entryName + "\">" + entryName + "</a></li>";
     }
+  }
 
-    responseContent += "</ul></body></html>";
-	responseStatus = 200;
-    closedir(dir);
+  responseContent += "</ul></body></html>";
+  responseStatus = 200;
+  closedir(dir);
 }

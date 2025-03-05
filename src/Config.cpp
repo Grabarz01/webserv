@@ -52,6 +52,8 @@ void parseRoute(ConfigTypes::ServerConfig& server,
   iss >> routePath;
   if (routePath == "{" || routePath.empty())
     throw std::runtime_error("Configuration path: incorrect path in route");
+  if (routePath.size() > 1 && routePath.at(routePath.size() - 1) == '/')
+    routePath.erase(routePath.size() - 1);
 
   std::string line;
   while (std::getline(file, line)) {
@@ -243,7 +245,7 @@ ConfigTypes::ServerConfig& Config::getServerConfig(
       std::cout << "No serverName " << serverName << " found for "
                 << HostPortPair << ". Returned first matching configuration."
                 << std::endl;
-    return *it;
+      return *it;
     }
   }
   throw std::runtime_error("No configuration found for host:port " +

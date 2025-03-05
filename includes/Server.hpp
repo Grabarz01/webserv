@@ -1,22 +1,12 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netinet/in.h>
 #include <poll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <algorithm>
-#include <cstring>
-#include <iostream>
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
 #include "Config.hpp"
-#include "HttpResponse.hpp"
-#include "RequestHandler.hpp"
-
 
 struct ioSocketData {
   std::string hostPortPair;

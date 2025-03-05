@@ -1,5 +1,17 @@
 #include "Server.hpp"
 
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <algorithm>
+#include <csignal>
+#include <cstring>
+#include <iostream>
+#include "HttpResponse.hpp"
+#include "RequestHandler.hpp"
+
 namespace {
 void setHostAndPort(const std::string& hostPortPair,
                     std::string& host,
@@ -120,8 +132,8 @@ void Server::setServer(void) {
 }
 
 void Server::serverListen() {
-  signal(SIGINT, Server::signalHandler);
-  signal(SIGTERM, Server::signalHandler);
+  std::signal(SIGINT, Server::signalHandler);
+  std::signal(SIGTERM, Server::signalHandler);
 
   // pollFds = listenFds + clientFds
   pollFds.reserve(100);
@@ -199,7 +211,7 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
 }
 
 void Server::sendDataToClient(pollfd& clientFd) {
-  ioSocketData socket = clientFdToIoSocketData.at(clientFd.fd);
+  ioSocketData& socket = clientFdToIoSocketData.at(clientFd.fd);
   if (socket.clientRequest.find("\r\n\r\n") == std::string::npos) {
     return;
   }
@@ -222,6 +234,11 @@ void Server::sendDataToClient(pollfd& clientFd) {
   int response_len = std::strlen(responseStr);
 
   send(clientFd.fd, responseStr, response_len, 0);
+  std::stringstream ss(responseStr);
+  std::string http;
+  std::string status;
+  ss >> http;
+  ss >> status;
 
   bool keepAlive = (socket.clientRequest.find("Connection: keep-alive") !=
                     std::string::npos);
@@ -233,7 +250,7 @@ void Server::sendDataToClient(pollfd& clientFd) {
     clientFd.events = POLLIN;
   }
 
-  std::cout << "**REQUEST RESPONDED\n" << std::endl;
+  std::cout << "**REQUEST RESPONDED with status " << status << "\n" << std::endl;
   // std::cout << "Content: \n" << responseStr << "\n";
 }
 

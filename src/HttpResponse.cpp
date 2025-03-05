@@ -45,10 +45,8 @@ void HttpResponse::generateResponse() {
     response.append("\r\n");
   }
   response.append("\r\n");
-  if (status == 200)
-    response.append(body);
-  else
-    setBodyForError();
+  response.append(body);
+  response.append("\r\n\r\n");
 };
 
 void HttpResponse::setStatusLine() {
@@ -77,14 +75,16 @@ void HttpResponse::setHeaders() {
 }
 
 void HttpResponse::setBody(const std::string& responseBody) {
-  if (!responseBody.empty())
+  if (status == 200 && !responseBody.empty())
     body = responseBody;
+  if (status != 200)
+    body = setBodyForError();
 }
 
-void HttpResponse::setBodyForError() {
+std::string HttpResponse::setBodyForError() {
   std::stringstream ss;
 
-  const char* errorMessage = "Unknown Error";
+  std::string errorMessage = "Unknown Error";
   for (size_t i = 0; i < httpErrorsCount; i++) {
     if (httpErrors[i].code == status) {
       errorMessage = httpErrors[i].message;
@@ -96,54 +96,13 @@ void HttpResponse::setBodyForError() {
      << "<html>\n"
      << "<head>\n"
      << "  <title>" << status << " " << errorMessage << "</title>\n"
-     << "  <style>\n"
-     << "    body { font-family: Arial, sans-serif; margin: 40px; line-height: "
-        "1.6; }\n"
-     << "    .container { max-width: 600px; margin: 0 auto; padding: 20px; "
-        "border: 1px solid #ccc; border-radius: 5px; }\n"
-     << "    h1 { color: #d33; margin-bottom: 10px; }\n"
-     << "    hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }\n"
-     << "  </style>\n"
      << "</head>\n"
      << "<body>\n"
-     << "  <div class=\"container\">\n"
      << "    <h1>" << status << " " << errorMessage << "</h1>\n"
      << "    <hr>\n"
-     << "    <p>The server cannot process your request.</p>\n";
-
-  switch (status) {
-    case 404:
-      ss << "    <p>The requested resource could not be found on this "
-            "server.</p>\n";
-      break;
-    case 403:
-      ss << "    <p>You don't have permission to access this resource.</p>\n";
-      break;
-    case 400:
-      ss << "    <p>Your browser sent a request that this server could not "
-            "understand.</p>\n";
-      break;
-    case 405:
-      ss << "    <p>The method specified in the request is not allowed for the "
-            "resource.</p>\n";
-      break;
-    case 500:
-    default:
-      ss << "    <p>The server encountered an internal error and was unable to "
-            "complete your request.</p>\n";
-      break;
-  }
-
-  ss << "    <hr>\n"
-     << "  </div>\n"
+     << "    <p>The server cannot process your request.</p>\n"
      << "</body>\n"
      << "</html>";
 
-  body = ss.str();
-  std::stringstream contentLength;
-  contentLength << body.length();
-  headers["Content-Length"] = contentLength.str();
-  headers["Content-Type"] = "text/html";
-
-  response.append(body);
+  return (ss.str());
 }

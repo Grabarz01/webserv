@@ -26,7 +26,7 @@ class HttpResponse {
 
   void setStatusLine();
   void setHeaders();
-  void setBodyForError();
+  std::string setBodyForError();
 };
 
 #endif
