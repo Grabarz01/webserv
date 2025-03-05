@@ -1,11 +1,22 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netinet/in.h>
 #include <poll.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <algorithm>
+#include <cstring>
+#include <iostream>
 #include <set>
 #include <string>
 #include <vector>
 #include "Config.hpp"
+#include "HttpResponse.hpp"
+#include "RequestHandler.hpp"
+
 
 struct ioSocketData {
   std::string hostPortPair;
@@ -26,6 +37,10 @@ class Server {
   void serverListen();
 
  private:
+  static volatile bool running;
+  static void signalHandler(int signum);
+  void cleanup();
+
   Config& serversConfig;
   std::vector<std::string> hostPortPairs;
   std::vector<std::string> serverNames;

@@ -1,18 +1,4 @@
-
 #include "Server.hpp"
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <algorithm>
-#include <cstring>
-#include <iostream>
-#include <vector>
-#include "Config.hpp"
-#include "HttpResponse.hpp"
-#include "RequestHandler.hpp"
 
 namespace {
 void setHostAndPort(const std::string& hostPortPair,
@@ -36,6 +22,27 @@ void setHostAndPort(const std::string& hostPortPair,
   }
 }
 }  // namespace
+
+volatile bool Server::running = true;
+
+void Server::signalHandler(int signum) {
+  if (signum == SIGINT || signum == SIGTERM) {
+    std::cout << "\nReceived signal " << signum << ", shutting down server..."
+              << std::endl;
+    running = false;
+  }
+}
+
+void Server::cleanup() {
+  std::vector<pollfd>::iterator it = pollFds.begin();
+  for (; it != pollFds.end(); ++it) {
+    if (it->fd >= 0) {
+      close(it->fd);
+    }
+  }
+  pollFds.clear();
+  clientFdToIoSocketData.clear();
+}
 
 Server::Server(Config& serversConfig) : serversConfig(serversConfig) {
   setHostPortPairs(serversConfig.getHostPortPairsForConfig());
@@ -107,12 +114,18 @@ void Server::setServer(void) {
 }
 
 void Server::serverListen() {
+  signal(SIGINT, Server::signalHandler);
+  signal(SIGTERM, Server::signalHandler);
+
   // pollFds = listenFds + clientFds
   pollFds.reserve(100);
-  while (true) {
-    if (poll(&pollFds[0], pollFds.size(), 0) < 0)
-      throw std::runtime_error(std::string("Poll error") +
+  while (running) {
+    if (poll(&pollFds[0], pollFds.size(), 100) < 0) {
+      if (errno == EINTR)
+        continue;
+      throw std::runtime_error(std::string("Poll error: ") +
                                std::string(strerror(errno)));
+    }
     std::vector<pollfd>::iterator pollFdIt = pollFds.begin();
 
     while (pollFdIt != pollFds.end()) {
@@ -132,6 +145,8 @@ void Server::serverListen() {
       ++pollFdIt;
     }
   }
+  cleanup();
+  std::cout << "Server has been shut down gracefully." << std::endl;
 }
 
 void Server::createPollFd(const pollfd listenFd, std::string& hostPortPair) {
