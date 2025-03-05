@@ -91,6 +91,12 @@ void Server::setServer(void) {
     if (server_fd < 0)
       throw std::runtime_error("Socket failed" + std::string(strerror(errno)));
 
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) <
+        0) {
+      throw std::runtime_error("setsockopt(SO_REUSEADDR) failed: " +
+                               std::string(strerror(errno)));
+    }
     sockaddr_in address;
     std::memset(&address, 0, sizeof(address));
     address.sin_family = AF_INET;
@@ -131,7 +137,6 @@ void Server::serverListen() {
     while (pollFdIt != pollFds.end()) {
       if (pollFdIt->revents & POLLIN) {
         if (std::distance(pollFds.begin(), pollFdIt) < hostPortPairs.size()) {
-          // New connection
           size_t listenFdIndex = std::distance(pollFds.begin(), pollFdIt);
           createPollFd(*pollFdIt, hostPortPairs[listenFdIndex]);
         } else {
@@ -160,12 +165,13 @@ void Server::createPollFd(const pollfd listenFd, std::string& hostPortPair) {
 
   createIoSocketData(clientFd, hostPortPair);
 
-  std::cout << "New connection for host:port " << hostPortPair << "\n";
+  std::cout << "**NEW CONNECTION for host:port " << hostPortPair << "\n";
 }
 
 void Server::createIoSocketData(int clientFd, std::string& hostPortPair) {
   ioSocketData ioSocketData;
   ioSocketData.hostPortPair = hostPortPair;
+  ioSocketData.clientRequest = "";
   clientFdToIoSocketData[clientFd] = ioSocketData;
 }
 
@@ -183,9 +189,9 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
   } else {
     std::string clientRequest(buffer, bytes_received);
     clientFdToIoSocketData.at(pollFdIt->fd).clientRequest += clientRequest;
-    std::cout << "Request from "
+    std::cout << "**NEW REQUEST RECEIVED from "
               << clientFdToIoSocketData.at(pollFdIt->fd).hostPortPair
-              << " received" << std::endl;
+              << std::endl;
     if (!(pollFdIt->events & POLLOUT))
       pollFdIt->events |= POLLOUT;
     return ++pollFdIt;
@@ -194,6 +200,9 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
 
 void Server::sendDataToClient(pollfd& clientFd) {
   ioSocketData socket = clientFdToIoSocketData.at(clientFd.fd);
+  if (socket.clientRequest.find("\r\n\r\n") == std::string::npos) {
+    return;
+  }
   std::string serverName =
       getHeaderValue(socket.clientRequest, "Host: ", ":\n");
   std::cout << "Getting config for: " << socket.hostPortPair
@@ -213,9 +222,18 @@ void Server::sendDataToClient(pollfd& clientFd) {
   int response_len = std::strlen(responseStr);
 
   send(clientFd.fd, responseStr, response_len, 0);
-  clientFd.events = POLLIN;
 
-  std::cout << "Request responded" << std::endl;
+  bool keepAlive = (socket.clientRequest.find("Connection: keep-alive") !=
+                    std::string::npos);
+  if (!keepAlive) {
+    close(clientFd.fd);
+    clientFdToIoSocketData.erase(clientFd.fd);
+  } else {
+    socket.clientRequest.clear();
+    clientFd.events = POLLIN;
+  }
+
+  std::cout << "**REQUEST RESPONDED\n" << std::endl;
   // std::cout << "Content: \n" << responseStr << "\n";
 }
 
@@ -223,7 +241,7 @@ std::string Server::getHeaderValue(const std::string& clientRequest,
                                    const std::string& headerParameter,
                                    const std::string& endChars) {
   size_t headerParPos = clientRequest.find(headerParameter);
-  std::cout << "clientRequest: " << clientRequest << std::endl;
+  // std::cout << "clientRequest: " << clientRequest << std::endl;
   if (headerParPos == std::string::npos)
     throw std::runtime_error("Server failure: parameter " + headerParameter +
                              " not found in a request header");
