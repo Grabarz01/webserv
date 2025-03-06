@@ -1,5 +1,10 @@
 #include "HttpResponse.hpp"
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+
 struct HttpError {
   unsigned int code;
   const char* message;
@@ -17,6 +22,15 @@ static const size_t httpErrorsCount =
 
 HttpResponse::HttpResponse() {};
 HttpResponse::~HttpResponse() {};
+
+void HttpResponse::configure(
+    const unsigned int responseStatus,
+    const std::map<unsigned int, std::string>& errorPages,
+    const std::string& responseBody) {
+  setStatus(responseStatus);
+  setErrorPages(errorPages);
+  setBody(responseBody);
+}
 
 void HttpResponse::setStatus(const unsigned int responseStatus) {
   this->status = responseStatus;
@@ -82,6 +96,21 @@ void HttpResponse::setBody(const std::string& responseBody) {
 }
 
 std::string HttpResponse::setBodyForError() {
+  if (!errorPages.empty() && errorPages.find(status) != errorPages.end()) {
+    std::string path = errorPages.at(status);
+    std::ifstream file(path.c_str());
+    if (file.is_open()) {
+      std::stringstream buffer;
+      buffer << file.rdbuf();
+      file.close();
+      return buffer.str();
+    } else {
+      std::cerr << "File at " + path +
+                       " does not exist. Using default error page."
+                << std::endl;
+    }
+  }
+
   std::stringstream ss;
 
   std::string errorMessage = "Unknown Error";
@@ -105,4 +134,9 @@ std::string HttpResponse::setBodyForError() {
      << "</html>";
 
   return (ss.str());
+}
+
+void HttpResponse::setErrorPages(
+    const std::map<unsigned int, std::string>& errorPages) {
+  this->errorPages = errorPages;
 }

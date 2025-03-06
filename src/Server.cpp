@@ -6,9 +6,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <algorithm>
+#include <cerrno>
 #include <csignal>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include "HttpResponse.hpp"
 #include "RequestHandler.hpp"
 
@@ -226,8 +228,8 @@ void Server::sendDataToClient(pollfd& clientFd) {
   request.handleRequest(server);
 
   HttpResponse response;
-  response.setStatus(request.getResponseStatus());
-  response.setBody(request.getResponseContent());
+  response.configure(request.getResponseStatus(), server.errorPages,
+                     request.getResponseContent());
   response.generateResponse();
 
   const char* responseStr = response.getResponseAsString();
@@ -248,9 +250,11 @@ void Server::sendDataToClient(pollfd& clientFd) {
   } else {
     socket.clientRequest.clear();
     clientFd.events = POLLIN;
+    // std::cout << "tu" << std::endl;
   }
 
-  std::cout << "**REQUEST RESPONDED with status " << status << "\n" << std::endl;
+  std::cout << "**REQUEST RESPONDED with status " << status << "\n"
+            << std::endl;
   // std::cout << "Content: \n" << responseStr << "\n";
 }
 

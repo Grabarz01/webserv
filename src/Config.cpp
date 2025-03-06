@@ -1,11 +1,18 @@
 #include "Config.hpp"
 
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+
 namespace {
 enum ParameterType {
   PARAM_LISTEN,
   PARAM_SERVER_NAMES,
   PARAM_LOCATION,
   PARAM_CGIPATH,
+  PARAM_ERROR_PAGES,
   PARAM_UNKNOWN,
   PARAM_ROUTE_ALLOWED_METH,
   PARAM_ROUTE_ROOT,
@@ -25,6 +32,8 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_LOCATION;
   else if (param == "cgiPath")
     return PARAM_CGIPATH;
+  else if (param == "errorPage")
+    return PARAM_ERROR_PAGES;
   else if (param == "allowedMethods")
     return PARAM_ROUTE_ALLOWED_METH;
   else if (param == "root")
@@ -43,7 +52,6 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_UNKNOWN;
 }
 
-// TODO: extensive tests
 void parseRoute(ConfigTypes::ServerConfig& server,
                 std::istringstream& iss,
                 std::ifstream& file) {
@@ -157,6 +165,15 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
       case PARAM_CGIPATH:
         iss >> server.cgiPath;
         break;
+      case PARAM_ERROR_PAGES: {
+        unsigned int errCode;
+        std::string path;
+        if (!(iss >> errCode))
+          throw std::runtime_error(
+              "Configuration file: Expected error code number in 'errorPages'");
+        iss >> path;
+        server.errorPages[errCode] = path;
+      } break;
       case PARAM_ROUTE_ALLOWED_METH: {
         std::string allowedMethod;
         while (iss >> allowedMethod) {
