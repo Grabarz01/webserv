@@ -20,6 +20,7 @@ enum ParameterType {
   PARAM_ROUTE_RETURN,
   PARAM_ROUTE_AUTOINDEX,
   PARAM_ROUTE_CGIALLOWEDEXT,
+  PARAM_ROUTE_MAX_BODY_SIZE,
   PARAM_CLOSING_BRACKET
 };
 
@@ -46,10 +47,23 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_ROUTE_AUTOINDEX;
   else if (param == "cgiAllowedExtensions")
     return PARAM_ROUTE_CGIALLOWEDEXT;
+  else if (param == "maxBodySize")
+    return PARAM_ROUTE_MAX_BODY_SIZE;
   else if (param == "}")
     return PARAM_CLOSING_BRACKET;
   else
     return PARAM_UNKNOWN;
+}
+
+void setDefaultValues(ConfigTypes::ServerConfig& server) {
+  if (server.hostPortPairs.empty())
+    server.hostPortPairs.insert("0.0.0.0:80");
+  if (server.defaultRoute.allowedMethods.empty()) {
+    server.defaultRoute.allowedMethods.insert("GET");
+    server.defaultRoute.allowedMethods.insert("POST");
+  }
+  if (server.defaultRoute.maxBodySize.empty())
+    server.defaultRoute.maxBodySize = "1024";
 }
 
 void parseRoute(ConfigTypes::ServerConfig& server,
@@ -60,8 +74,6 @@ void parseRoute(ConfigTypes::ServerConfig& server,
   iss >> routePath;
   if (routePath == "{" || routePath.empty())
     throw std::runtime_error("Configuration path: incorrect path in route");
-  // if (routePath.size() > 1 && routePath.at(routePath.size() - 1) == '/')
-  //   routePath.erase(routePath.size() - 1);
 
   std::string line;
   while (std::getline(file, line)) {
@@ -114,6 +126,13 @@ void parseRoute(ConfigTypes::ServerConfig& server,
           route.cgiAllowedExtensions.push_back(temp);
         }
       } break;
+      case PARAM_ROUTE_MAX_BODY_SIZE: {
+        routeIss >> route.maxBodySize;
+        for (size_t i; i < route.maxBodySize.size(); i++) {
+          if (!isdigit(route.maxBodySize[i]))
+            throw std::runtime_error("Configuration file: maxBodySize invalid");
+        }
+      } break;
       case PARAM_CLOSING_BRACKET: {
         server.routes[routePath] = route;
         return;
@@ -124,15 +143,6 @@ void parseRoute(ConfigTypes::ServerConfig& server,
     }
   }
   throw std::runtime_error("Configuration file: expected closing bracket");
-}
-
-void setDefaultValues(ConfigTypes::ServerConfig& server) {
-  if (server.hostPortPairs.empty())
-    server.hostPortPairs.insert("0.0.0.0:80");
-  if (server.defaultRoute.allowedMethods.empty()) {
-    server.defaultRoute.allowedMethods.insert("GET");
-    server.defaultRoute.allowedMethods.insert("POST");
-  }
 }
 
 void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
@@ -213,6 +223,13 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
             throw std::runtime_error("Configuration file: cgi extension " +
                                      temp + " not allowed");
           server.defaultRoute.cgiAllowedExtensions.push_back(temp);
+        }
+      } break;
+      case PARAM_ROUTE_MAX_BODY_SIZE: {
+        iss >> server.defaultRoute.maxBodySize;
+        for (size_t i; i < server.defaultRoute.maxBodySize.size(); i++) {
+          if (!isdigit(server.defaultRoute.maxBodySize[i]))
+            throw std::runtime_error("Configuration file: maxBodySize invalid");
         }
       } break;
       case PARAM_CLOSING_BRACKET: {

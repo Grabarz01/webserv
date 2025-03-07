@@ -13,6 +13,7 @@
 #include "Cgi.hpp"
 
 namespace {
+
 void copyDefaultValuesToRouteConfig(
     ConfigTypes::RouteConfig& routeConfig,
     const ConfigTypes::ServerConfig& serverConfig) {
@@ -27,7 +28,10 @@ void copyDefaultValuesToRouteConfig(
         serverConfig.defaultRoute.cgiAllowedExtensions;
   if (routeConfig.redirect.empty())
     routeConfig.redirect = serverConfig.defaultRoute.redirect;
+  if (routeConfig.maxBodySize.empty())
+      routeConfig.maxBodySize = serverConfig.defaultRoute.maxBodySize;
 }
+
 }  // namespace
 
 RequestHandler::RequestHandler(std::string rawRequest)
@@ -115,7 +119,7 @@ void RequestHandler::setRouteConfig(
         break;
     }
   }
-  
+
   if (serverConfig.routes.find("/") != serverConfig.routes.end()) {
     routeConfig = serverConfig.routes.find("/")->second;
     this->route = "/";
