@@ -9,23 +9,27 @@ class RequestHandler {
  private:
   std::string hostPortPair;
   std::string rawRequest;
+  std::string route;
   ConfigTypes::RouteConfig routeConfig;
+  std::string pathWithRoot;
   std::string method;
   std::string path;
   std::string version;
   std::map<std::string, std::string> headers;
   std::string body;
-  std::string responseContent;
+
   unsigned int responseStatus;
+  std::string responseContent;
   long conLen;
 
   // methods
   void parseRequest();
-  void setRouteConfig(ConfigTypes::ServerConfig& serverConfig);
+  void setRouteConfig(const ConfigTypes::ServerConfig& serverConfig);
   void getReq(void);
   void postReq(void);
   void deleteReq(void);
   void getCgiHandler(size_t pos_py, size_t pos_query);
+  void setPathWithRoot();
 
  public:
   RequestHandler(std::string rawRequest);

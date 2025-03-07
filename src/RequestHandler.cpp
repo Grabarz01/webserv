@@ -13,8 +13,9 @@
 #include "Cgi.hpp"
 
 namespace {
-void copyDefaultValuesToRouteConfig(ConfigTypes::RouteConfig& routeConfig,
-                                    ConfigTypes::ServerConfig& serverConfig) {
+void copyDefaultValuesToRouteConfig(
+    ConfigTypes::RouteConfig& routeConfig,
+    const ConfigTypes::ServerConfig& serverConfig) {
   if (routeConfig.root.empty())
     routeConfig.root = serverConfig.defaultRoute.root;
   if (routeConfig.index.empty())
@@ -87,32 +88,37 @@ void RequestHandler::parseRequest() {
   }
 }
 
-void RequestHandler::setRouteConfig(ConfigTypes::ServerConfig& serverConfig) {
+void RequestHandler::setRouteConfig(
+    const ConfigTypes::ServerConfig& serverConfig) {
   std::string route = path;
   size_t queryPos = route.find("?");
   if (queryPos != std::string::npos) {
     route = route.substr(0, queryPos);
   }
+
   std::cout << "receivedRoute: " << route << std::endl;
-  while (route != "/") {
+  while (!route.empty()) {
     // std::cout << "loopRoute: " << route << std::endl;
     if (serverConfig.routes.find(route) != serverConfig.routes.end()) {
-      std::map<std::string, ConfigTypes::RouteConfig>::iterator it;
+      std::map<std::string, ConfigTypes::RouteConfig>::const_iterator it;
       it = serverConfig.routes.find(route);
       std::string routePath = it->first;
       routeConfig = it->second;
       std::cout << "used route: " << routePath << std::endl;
-      copyDefaultValuesToRouteConfig(routeConfig, serverConfig);
+      this->route = route;
       return;
     } else {
-      size_t slashPos = route.find_last_of('/');
-      if (slashPos == std::string::npos || slashPos == 0)
-        route = "/";
-      route = route.substr(0, slashPos);
+      if (route.size() > 1) {
+        size_t slashPos = route.find_last_of('/', route.size() - 2);
+        route = route.substr(0, slashPos + 1);
+      } else
+        break;
     }
   }
+  
   if (serverConfig.routes.find("/") != serverConfig.routes.end()) {
     routeConfig = serverConfig.routes.find("/")->second;
+    this->route = "/";
     std::cout << "used route: /" << std::endl;
   } else {
     responseStatus = 404;
@@ -135,12 +141,17 @@ void RequestHandler::printRequest() {
 
 void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   setRouteConfig(server);
-  // std::cout << routeConfig.index << std::endl;
+  copyDefaultValuesToRouteConfig(routeConfig, server);
+  setPathWithRoot();
+
   if (routeConfig.allowedMethods.find(method) ==
-      routeConfig.allowedMethods.end()) {
+      routeConfig.allowedMethods.end())
     responseStatus = 405;
-    // throw std::runtime_error("Method not Allowed");
-  } else if (method == "GET") {
+  std::cout << responseStatus << std::endl;
+  if (responseStatus != 200)
+    return;
+
+  if (method == "GET") {
     getReq();
   } else if (method == "POST") {
     postReq();
@@ -148,7 +159,6 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
     deleteReq();
   } else {
     responseStatus = 501;
-    // throw std::runtime_error("Method not implemented");
   }
 }
 
@@ -160,19 +170,20 @@ const unsigned int RequestHandler::getResponseStatus() const {
   return responseStatus;
 }
 
-// bool RequestHandler::availabilityCheck(void)  // serwerconfig
-// {
-//   /*if(server.stack.empty())
-//           return true;
-//   if(stack.find(<std::string>method) != set.end())
-//           return true
-//   */
-//   return true;
-// }
+void RequestHandler::setPathWithRoot() {
+  if (routeConfig.root.empty() || route.empty() || path.empty() ||
+      path.find(route, 0) == std::string::npos) {
+    return;
+  }
+
+  pathWithRoot = routeConfig.root + path.substr(route.size(), path.size());
+
+  std::cout << "pathWithRoot: " << pathWithRoot << std::endl;
+}
 
 void RequestHandler::getReq(void) {
-  size_t pos_py = path.find(".py");
-  size_t pos_query = path.find("?");
+  size_t pos_py = pathWithRoot.find(".py");
+  size_t pos_query = pathWithRoot.find("?");
   if (pos_py == std::string::npos ||
       pos_query != std::string::npos && pos_query < pos_py)
     ;
@@ -181,8 +192,8 @@ void RequestHandler::getReq(void) {
     return;
   }
 
-  path.erase(path.begin());
-  std::ifstream file(path.c_str());
+  pathWithRoot.erase(pathWithRoot.begin());
+  std::ifstream file(pathWithRoot.c_str());
   if (!file.is_open()) {
     responseStatus = 404;
     return;

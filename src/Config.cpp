@@ -60,8 +60,8 @@ void parseRoute(ConfigTypes::ServerConfig& server,
   iss >> routePath;
   if (routePath == "{" || routePath.empty())
     throw std::runtime_error("Configuration path: incorrect path in route");
-  if (routePath.size() > 1 && routePath.at(routePath.size() - 1) == '/')
-    routePath.erase(routePath.size() - 1);
+  // if (routePath.size() > 1 && routePath.at(routePath.size() - 1) == '/')
+  //   routePath.erase(routePath.size() - 1);
 
   std::string line;
   while (std::getline(file, line)) {
@@ -84,7 +84,7 @@ void parseRoute(ConfigTypes::ServerConfig& server,
         }
       } break;
       case PARAM_ROUTE_ROOT:
-        std::getline(routeIss, route.root);
+        routeIss >> route.root;
         break;
       case PARAM_ROUTE_INDEX:
         routeIss >> route.index;
@@ -93,6 +93,9 @@ void parseRoute(ConfigTypes::ServerConfig& server,
         std::string temp;
         while (routeIss >> temp)
           route.redirect.push_back(temp);
+        if (route.redirect.size() != 2)
+          throw std::runtime_error("Configuration file: invalid redirect" +
+                                   temp);
       } break;
       case PARAM_ROUTE_AUTOINDEX: {
         std::string temp;
