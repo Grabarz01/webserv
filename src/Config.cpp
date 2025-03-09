@@ -115,7 +115,7 @@ void parseRoute(ConfigTypes::ServerConfig& server,
         if (temp != "off" && temp != "on")
           throw std::runtime_error(
               "Configuration file: incorrect autoindex value: " + temp);
-        route.autoindex = (temp == "on");
+        route.autoindex = temp;
       } break;
       case PARAM_ROUTE_CGIALLOWEDEXT: {
         std::string temp;
@@ -214,7 +214,7 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
         if (temp != "off" && temp != "on")
           throw std::runtime_error("Configuration file: incorrect autoindex: " +
                                    temp);
-        server.defaultRoute.autoindex = (temp == "on");
+        server.defaultRoute.autoindex = temp;
       } break;
       case PARAM_ROUTE_CGIALLOWEDEXT: {
         std::string temp;

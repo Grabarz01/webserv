@@ -11,7 +11,7 @@ namespace ConfigTypes {
 struct RouteConfig {
   std::string root;
   std::string index;
-  bool autoindex;
+  std::string autoindex;
   std::set<std::string> allowedMethods;
   std::vector<std::string> cgiAllowedExtensions;
   std::vector<std::string> redirect;

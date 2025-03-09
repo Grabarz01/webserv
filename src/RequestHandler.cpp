@@ -10,6 +10,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 #include "Cgi.hpp"
 
 namespace {
@@ -29,7 +30,12 @@ void copyDefaultValuesToRouteConfig(
   if (routeConfig.redirect.empty())
     routeConfig.redirect = serverConfig.defaultRoute.redirect;
   if (routeConfig.maxBodySize.empty())
-      routeConfig.maxBodySize = serverConfig.defaultRoute.maxBodySize;
+    routeConfig.maxBodySize = serverConfig.defaultRoute.maxBodySize;
+  if (routeConfig.autoindex.empty() &&
+      !serverConfig.defaultRoute.autoindex.empty())
+    routeConfig.autoindex = serverConfig.defaultRoute.autoindex;
+  else if (routeConfig.autoindex.empty())
+    routeConfig.autoindex = "off";
 }
 
 }  // namespace
@@ -148,14 +154,14 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   copyDefaultValuesToRouteConfig(routeConfig, server);
   setPathWithRoot();
 
-  if (routeConfig.allowedMethods.find(method) ==
-      routeConfig.allowedMethods.end())
+  std::cout << routeConfig.autoindex << std::endl;
+  if (routeConfig.autoindex == "on" && *path.rbegin() == '/')
+    autoIndex();
+  else if (routeConfig.allowedMethods.find(method) ==
+           routeConfig.allowedMethods.end()) {
     responseStatus = 405;
-  std::cout << responseStatus << std::endl;
-  if (responseStatus != 200)
-    return;
-
-  if (method == "GET") {
+    std::cout << responseStatus << std::endl;
+  } else if (method == "GET") {
     getReq();
   } else if (method == "POST") {
     postReq();
@@ -434,40 +440,61 @@ void RequestHandler::deleteReq(void) {
 }
 
 void RequestHandler::autoIndex() {
-  char dirPath[] = "/";
-  DIR* dir = opendir(dirPath);
-  std::string responseContent;
+  std::cout << "Generating directory listing..." << std::endl;
+  std::cout << pathWithRoot << std::endl;
+  char* dir_path = &(pathWithRoot.substr(1)[0]);
+  DIR* dir = opendir(dir_path);
 
   if (dir == NULL) {
-    responseContent +=
-        "<html><body><h2>Error: Directory not found or cannot be "
-        "opened.</h2></body></html>";
     responseStatus = 404;
     return;
   }
 
-  responseContent +=
-      "<html><body><h2>Directory Listing: " + std::string(dirPath) +
+  responseContent =
+      "<html><body><h2>Directory Listing: " + std::string(dir_path) +
       "</h2><ul>";
 
   struct dirent* entry;
   while ((entry = readdir(dir)) != NULL) {
     std::string entryName = entry->d_name;
-
     if (entryName == "." || entryName == "..") {
       continue;
     }
 
+    responseContent += "<li><a href=\"" + pathWithRoot + entryName;
     if (entry->d_type == DT_DIR) {
-      responseContent +=
-          "<li><a href=\"" + entryName + "/\">" + entryName + "/</a></li>";
+      responseContent += "/\">" + entryName + "/</a></li>";
     } else {
-      responseContent +=
-          "<li><a href=\"" + entryName + "\">" + entryName + "</a></li>";
+      responseContent += "\">" + entryName + "</a></li>";
     }
   }
 
   responseContent += "</ul></body></html>";
-  responseStatus = 200;
   closedir(dir);
+}
+
+void RequestHandler::redirect(void) {
+  if (routeConfig.redirect.size() == 2) {
+    int status = atoi(routeConfig.redirect[0].c_str());
+
+    if (status >= 300 && status < 400) {
+      responseStatus = status;
+      responseContent = "HTTP/1.1 " + routeConfig.redirect[0] + " Redirect\r\n";
+      responseContent += "Location: " + routeConfig.redirect[1] + "\r\n";
+      responseContent += "Content-Type: text/html\r\n";
+      responseContent += "Content-Length: 0\r\n\r\n";
+    } else {
+      responseStatus = 500;
+      responseContent = "HTTP/1.1 500 Internal Server Error\r\n";
+      responseContent += "Content-Type: text/plain\r\n";
+      responseContent += "Content-Length: 19\r\n\r\n";
+      responseContent += "Invalid redirect code\n";
+    }
+  } else {
+    responseStatus = 500;
+    responseContent = "HTTP/1.1 500 Internal Server Error\r\n";
+    responseContent += "Content-Type: text/plain\r\n";
+    responseContent += "Content-Length: 22\r\n\r\n";
+    responseContent += "Bad redirect vector size\n";
+  }
 }

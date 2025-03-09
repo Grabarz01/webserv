@@ -29,7 +29,8 @@ class RequestHandler {
   void postReq(void);
   void deleteReq(void);
   void getCgiHandler(size_t pos_py, size_t pos_query);
-  void setPathWithRoot();
+  void setPathWithRoot(void);
+  void redirect(void);
 
  public:
   RequestHandler(std::string rawRequest);
