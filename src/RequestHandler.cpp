@@ -154,13 +154,16 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   copyDefaultValuesToRouteConfig(routeConfig, server);
   setPathWithRoot();
 
-  std::cout << routeConfig.autoindex << std::endl;
-  if (routeConfig.autoindex == "on" && *path.rbegin() == '/')
-    autoIndex();
-  else if (routeConfig.allowedMethods.find(method) ==
-           routeConfig.allowedMethods.end()) {
+  if (!routeConfig.redirect.empty())
+    redirect();
+  else if (*path.rbegin() == '/') {
+    if (!routeConfig.index.empty())
+      indexCheck();
+    else if (routeConfig.autoindex == "on")
+      autoIndex();
+  } else if (routeConfig.allowedMethods.find(method) ==
+             routeConfig.allowedMethods.end()) {
     responseStatus = 405;
-    std::cout << responseStatus << std::endl;
   } else if (method == "GET") {
     getReq();
   } else if (method == "POST") {
@@ -478,23 +481,28 @@ void RequestHandler::redirect(void) {
     int status = atoi(routeConfig.redirect[0].c_str());
 
     if (status >= 300 && status < 400) {
-      responseStatus = status;
-      responseContent = "HTTP/1.1 " + routeConfig.redirect[0] + " Redirect\r\n";
-      responseContent += "Location: " + routeConfig.redirect[1] + "\r\n";
-      responseContent += "Content-Type: text/html\r\n";
-      responseContent += "Content-Length: 0\r\n\r\n";
+      responseStatus = 301;
+      responseContent += routeConfig.redirect[1];
     } else {
       responseStatus = 500;
-      responseContent = "HTTP/1.1 500 Internal Server Error\r\n";
-      responseContent += "Content-Type: text/plain\r\n";
-      responseContent += "Content-Length: 19\r\n\r\n";
-      responseContent += "Invalid redirect code\n";
     }
   } else {
     responseStatus = 500;
-    responseContent = "HTTP/1.1 500 Internal Server Error\r\n";
-    responseContent += "Content-Type: text/plain\r\n";
-    responseContent += "Content-Length: 22\r\n\r\n";
-    responseContent += "Bad redirect vector size\n";
   }
+}
+
+void RequestHandler::indexCheck() {
+  pathWithRoot.erase(pathWithRoot.begin());
+  pathWithRoot += routeConfig.index;
+  std::ifstream file(pathWithRoot.c_str());
+  if (!file.is_open()) {
+    responseStatus = 404;
+    return;
+  }
+
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  responseContent = buffer.str();
+  file.close();
+  responseStatus = 200;
 }

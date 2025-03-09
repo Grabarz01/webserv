@@ -31,6 +31,7 @@ class RequestHandler {
   void getCgiHandler(size_t pos_py, size_t pos_query);
   void setPathWithRoot(void);
   void redirect(void);
+  void indexCheck(void);
 
  public:
   RequestHandler(std::string rawRequest);

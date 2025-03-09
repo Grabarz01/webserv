@@ -12,6 +12,7 @@ struct HttpError {
 
 static const HttpError httpErrors[] = {{200, "OK"},
                                        {400, "Bad Request"},
+                                       {301, "Moved Permanently"},
                                        {403, "Forbidden"},
                                        {404, "Not Found"},
                                        {405, "Method Not Allowed"},
@@ -84,14 +85,16 @@ void HttpResponse::setHeaders() {
   ss << body.length();
   headers["Content-length"] = ss.str();
   headers["Server"] = "Default";
-  if (status != 200)
+  if (status == 301)
+	headers["Location"] = body;
+  if (status != 200 && status != 301)
     headers["Connection"] = "close";
 }
 
 void HttpResponse::setBody(const std::string& responseBody) {
-  if (status == 200 && !responseBody.empty())
+  if ((status == 200 || status == 301) && !responseBody.empty())
     body = responseBody;
-  if (status != 200)
+  if (status != 200 && status != 301)
     body = setBodyForError();
 }
 
