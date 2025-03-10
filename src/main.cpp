@@ -1,13 +1,5 @@
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <algorithm>
-#include <cstring>
 #include <iostream>
-#include <vector>
+#include <stdexcept>
 #include "Config.hpp"
 #include "Server.hpp"
 
@@ -28,6 +20,7 @@ int main(int argc, char** argv) {
     Server server(conf);
     server.setServer();
     server.serverListen();
+
   } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return 1;
