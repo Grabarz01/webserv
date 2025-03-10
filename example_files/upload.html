@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload plików</title>
+    <script>
+        function validateFiles(input) {
+            if (input.files.length > 4) {
+                alert("Możesz przesłać maksymalnie 4 pliki!");
+                input.value = ""; // Resetuje pole wyboru plików
+            }
+        }
+    </script>
+</head>
+<body>
+    <h2>Wyślij pliki</h2>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <label for="file">Wybierz pliki (maks. 4):</label>
+        <input type="file" name="file[]" id="file" multiple onchange="validateFiles(this)">
+        <br><br>
+        <input type="submit" value="Wyślij">
+    </form>
+</body>
+</html>

@@ -32,6 +32,7 @@ class RequestHandler {
   void setPathWithRoot(void);
   void redirect(void);
   void indexCheck(void);
+  void uploadfile(void);
 
  public:
   RequestHandler(std::string rawRequest);

@@ -13,6 +13,7 @@ struct HttpError {
 static const HttpError httpErrors[] = {{200, "OK"},
                                        {400, "Bad Request"},
                                        {301, "Moved Permanently"},
+									   {413, "Request Entity Too Large"},
                                        {403, "Forbidden"},
                                        {404, "Not Found"},
                                        {405, "Method Not Allowed"},

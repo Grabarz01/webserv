@@ -306,6 +306,16 @@ content-size = 0
 no content-size
 */
 void RequestHandler::postReq() {
+  if (atoi(headers["Content-Length"].c_str()) >
+      atoi(routeConfig.maxBodySize.c_str())) {
+    responseStatus = 413;
+    return;
+  }
+  if (headers["Content-Type"].find("multipart/form-part") !=
+      std::string::npos) {
+    uploadfile();
+    return;
+  }
   size_t pos_py = path.find(".py");
   size_t pos_query = path.find("?");
   if (pos_py == std::string::npos ||
@@ -505,4 +515,84 @@ void RequestHandler::indexCheck() {
   responseContent = buffer.str();
   file.close();
   responseStatus = 200;
+}
+
+void RequestHandler::uploadfile(void) {
+  std::string content_type = headers["Content-Type"];
+  size_t pos = content_type.find("boundary=");
+  std::string boundary = content_type.substr(pos + 9, std::string::npos);
+  std::string delimiter = "--" + boundary;
+  std::string end_boundary = delimiter + "--";
+
+  size_t part_start = body.find(delimiter);
+  if (part_start == std::string::npos) {
+    responseStatus = 400;
+    return;
+  }
+  size_t body_end = body.find(boundary);
+  if (body_end == std::string::npos) {
+    responseStatus = 400;
+    return;
+  }
+
+  while (part_start != std::string::npos && part_start != body_end) {
+    part_start += delimiter.length();
+
+    size_t disposition_start = body.find("Content-Disposition:", part_start);
+    if (disposition_start == std::string::npos) {
+      responseStatus = 400;
+      return;
+    }
+
+    size_t filename_pos = body.find("filename=\"", disposition_start);
+    if (filename_pos == std::string::npos) {
+      responseStatus = 400;
+      return;
+    }
+
+    filename_pos += 10;
+    size_t filename_end = body.find("\"", filename_pos);
+    if (filename_end == std::string::npos) {
+      responseStatus = 400;
+      return;
+    }
+
+    std::string filename =
+        body.substr(filename_pos, filename_end - filename_pos);
+    if (filename.empty()) {
+      responseStatus = 400;
+      return;
+    }
+
+    size_t file_data_start = body.find("\r\n\r\n", filename_end);
+    if (file_data_start == std::string::npos) {
+      responseStatus = 400;
+      return;
+    }
+    file_data_start += 4;
+
+    size_t file_data_end = body.find(delimiter, file_data_start);
+    if (file_data_end == std::string::npos) {
+      responseStatus = 400;
+      return;
+    }
+
+    while (
+        file_data_end > file_data_start &&
+        (body[file_data_end - 1] == '\r' || body[file_data_end - 1] == '\n')) {
+      file_data_end--;
+    }
+
+    std::ofstream file(filename.c_str(), std::ios::binary);
+    if (!file) {
+      std::cerr << "Błąd: nie można otworzyć pliku " << filename << std::endl;
+      responseStatus = 403;
+      return;
+    }
+
+    file.write(body.c_str() + file_data_start, file_data_end - file_data_start);
+    file.close();
+
+    part_start = body.find(delimiter, file_data_end);
+  }
 }
