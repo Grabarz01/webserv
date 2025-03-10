@@ -21,6 +21,7 @@ enum ParameterType {
   PARAM_ROUTE_AUTOINDEX,
   PARAM_ROUTE_CGIALLOWEDEXT,
   PARAM_ROUTE_MAX_BODY_SIZE,
+  PARAM_ROUTE_UPLOAD_PATH,
   PARAM_CLOSING_BRACKET
 };
 
@@ -49,6 +50,8 @@ ParameterType getParameterType(const std::string& param) {
     return PARAM_ROUTE_CGIALLOWEDEXT;
   else if (param == "maxBodySize")
     return PARAM_ROUTE_MAX_BODY_SIZE;
+  else if (param == "uploadPath")
+    return PARAM_ROUTE_UPLOAD_PATH;
   else if (param == "}")
     return PARAM_CLOSING_BRACKET;
   else
@@ -133,6 +136,9 @@ void parseRoute(ConfigTypes::ServerConfig& server,
             throw std::runtime_error("Configuration file: maxBodySize invalid");
         }
       } break;
+      case PARAM_ROUTE_UPLOAD_PATH:
+        routeIss >> server.defaultRoute.uploadPath;
+        break;
       case PARAM_CLOSING_BRACKET: {
         server.routes[routePath] = route;
         return;
@@ -232,6 +238,9 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
             throw std::runtime_error("Configuration file: maxBodySize invalid");
         }
       } break;
+      case PARAM_ROUTE_UPLOAD_PATH:
+        iss >> server.defaultRoute.uploadPath;
+        break;
       case PARAM_CLOSING_BRACKET: {
         setDefaultValues(server);
         return;

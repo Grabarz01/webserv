@@ -16,6 +16,7 @@ struct RouteConfig {
   std::vector<std::string> cgiAllowedExtensions;
   std::vector<std::string> redirect;
   std::string maxBodySize;
+  std::string uploadPath;
 };
 
 struct ServerConfig {
