@@ -36,6 +36,8 @@ void copyDefaultValuesToRouteConfig(
     routeConfig.autoindex = serverConfig.defaultRoute.autoindex;
   else if (routeConfig.autoindex.empty())
     routeConfig.autoindex = "off";
+  if (routeConfig.uploadPath.empty())
+    routeConfig.uploadPath = serverConfig.defaultRoute.uploadPath;
 }
 
 }  // namespace
@@ -427,25 +429,25 @@ void RequestHandler::postReq() {
 }
 
 void RequestHandler::deleteReq(void) {
-  if (path.empty()) {
+  if (pathWithRoot.empty()) {
     responseStatus = 404;
     return;
   }
-  if (path[0] == '/') {
-    path.erase(path.begin());
+  if (pathWithRoot[0] == '/') {
+    pathWithRoot.erase(pathWithRoot.begin());
   }
-  std::cout << path << std::endl;
-  if (remove(path.c_str()) == 0) {
+  std::cout << pathWithRoot << std::endl;
+  if (remove(pathWithRoot.c_str()) == 0) {
     responseStatus = 200;
     responseContent = "File deleted successfully";
     conLen = 26;
     return;
   } else {
-    if (access(path.c_str(), F_OK) != 0) {
+    if (access(pathWithRoot.c_str(), F_OK) != 0) {
       responseStatus = 404;
       return;
     }
-    if (access(path.c_str(), W_OK) != 0) {
+    if (access(pathWithRoot.c_str(), W_OK) != 0) {
       responseStatus = 403;
       return;
     }
