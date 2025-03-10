@@ -100,10 +100,11 @@ void Server::setServer(void) {
     std::string host;
     unsigned int port;
     setHostAndPort(*it, host, port);
-    // std::cout << "trying to bind: " << host << ":" << port << std::endl;
+
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0)
       throw std::runtime_error("Socket failed" + std::string(strerror(errno)));
+    createIoSocketData(server_fd, *it);
 
     int opt = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) <
@@ -151,8 +152,7 @@ void Server::serverListen() {
     while (pollFdIt != pollFds.end()) {
       if (pollFdIt->revents & POLLIN) {
         if (std::distance(pollFds.begin(), pollFdIt) < hostPortPairs.size()) {
-          size_t listenFdIndex = std::distance(pollFds.begin(), pollFdIt);
-          createPollFd(*pollFdIt, hostPortPairs[listenFdIndex]);
+          createPollFd(*pollFdIt, clientFdToIoSocketData[pollFdIt->fd].hostPortPair);
         } else {
           pollFdIt = receiveDataFromClient(pollFdIt);
           continue;

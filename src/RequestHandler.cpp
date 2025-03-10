@@ -211,7 +211,9 @@ void RequestHandler::getReq(void) {
     return;
   }
 
-  pathWithRoot.erase(pathWithRoot.begin());
+  if (!pathWithRoot.empty() && *pathWithRoot.begin() == '/')
+    pathWithRoot.erase(pathWithRoot.begin());
+
   std::ifstream file(pathWithRoot.c_str());
   if (!file.is_open()) {
     responseStatus = 404;
