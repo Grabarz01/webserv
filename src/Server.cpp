@@ -230,7 +230,7 @@ void Server::sendDataToClient(pollfd& clientFd) {
   HttpResponse response;
   response.configure(request.getResponseStatus(), server.errorPages,
                      request.getResponseContent());
-  response.generateResponse();
+  response.generateResponse(request.getResponseHeaders());
 
   const char* responseStr = response.getResponseAsString();
   int response_len = std::strlen(responseStr);

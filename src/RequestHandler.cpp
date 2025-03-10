@@ -48,6 +48,10 @@ RequestHandler::RequestHandler(std::string rawRequest)
 };
 RequestHandler::~RequestHandler() {};
 
+const std::map<std::string, std::string>& RequestHandler::getResponseHeaders(
+    void) {
+  return this->responseHeaders;
+}
 void RequestHandler::parseRequest() {
   std::istringstream req(rawRequest);
   req >> this->method >> this->path >> this->version;
@@ -303,17 +307,13 @@ void RequestHandler::getCgiHandler(size_t pos_py, size_t pos_query) {
   }
 }
 
-/*cases:
-content-size = 0
-no content-size
-*/
 void RequestHandler::postReq() {
   if (atoi(headers["Content-Length"].c_str()) >
       atoi(routeConfig.maxBodySize.c_str())) {
     responseStatus = 413;
     return;
   }
-  if (headers["Content-Type"].find("multipart/form-part") !=
+  if (headers["Content-Type"].find("multipart/form-data") !=
       std::string::npos) {
     uploadfile();
     return;
@@ -457,8 +457,8 @@ void RequestHandler::deleteReq(void) {
 void RequestHandler::autoIndex() {
   std::cout << "Generating directory listing..." << std::endl;
   std::cout << pathWithRoot << std::endl;
-  char* dir_path = &(pathWithRoot.substr(1)[0]);
-  DIR* dir = opendir(dir_path);
+  std::string pathlisting = pathWithRoot.substr(1, std::string::npos);
+  DIR* dir = opendir(pathlisting.c_str());
 
   if (dir == NULL) {
     responseStatus = 404;
@@ -466,7 +466,7 @@ void RequestHandler::autoIndex() {
   }
 
   responseContent =
-      "<html><body><h2>Directory Listing: " + std::string(dir_path) +
+      "<html><body><h2>Directory Listing: " + std::string(pathlisting) +
       "</h2><ul>";
 
   struct dirent* entry;
@@ -494,7 +494,7 @@ void RequestHandler::redirect(void) {
 
     if (status >= 300 && status < 400) {
       responseStatus = 301;
-      responseContent += routeConfig.redirect[1];
+      responseHeaders["Location"] = routeConfig.redirect[1];
     } else {
       responseStatus = 500;
     }
@@ -520,18 +520,24 @@ void RequestHandler::indexCheck() {
 }
 
 void RequestHandler::uploadfile(void) {
+  if (routeConfig.uploadPath.empty() ||
+      routeConfig.uploadPath[routeConfig.uploadPath.size() - 1] != '/') {
+    responseStatus = 400;
+    return;
+  }
   std::string content_type = headers["Content-Type"];
   size_t pos = content_type.find("boundary=");
   std::string boundary = content_type.substr(pos + 9, std::string::npos);
   std::string delimiter = "--" + boundary;
   std::string end_boundary = delimiter + "--";
+  responseStatus = 200;
 
   size_t part_start = body.find(delimiter);
   if (part_start == std::string::npos) {
     responseStatus = 400;
     return;
   }
-  size_t body_end = body.find(boundary);
+  size_t body_end = body.find(end_boundary);
   if (body_end == std::string::npos) {
     responseStatus = 400;
     return;
@@ -579,22 +585,16 @@ void RequestHandler::uploadfile(void) {
       return;
     }
 
-    while (
-        file_data_end > file_data_start &&
-        (body[file_data_end - 1] == '\r' || body[file_data_end - 1] == '\n')) {
-      file_data_end--;
-    }
-
+    file_data_end -= 2;
+    filename = routeConfig.uploadPath + filename;
     std::ofstream file(filename.c_str(), std::ios::binary);
     if (!file) {
       std::cerr << "Błąd: nie można otworzyć pliku " << filename << std::endl;
       responseStatus = 403;
       return;
     }
-
     file.write(body.c_str() + file_data_start, file_data_end - file_data_start);
     file.close();
-
     part_start = body.find(delimiter, file_data_end);
   }
 }

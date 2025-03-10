@@ -13,7 +13,7 @@ struct HttpError {
 static const HttpError httpErrors[] = {{200, "OK"},
                                        {400, "Bad Request"},
                                        {301, "Moved Permanently"},
-									   {413, "Request Entity Too Large"},
+                                       {413, "Request Entity Too Large"},
                                        {403, "Forbidden"},
                                        {404, "Not Found"},
                                        {405, "Method Not Allowed"},
@@ -44,10 +44,11 @@ const char* HttpResponse::getResponseAsString() const {
   return (response.c_str());
 };
 
-void HttpResponse::generateResponse() {
+void HttpResponse::generateResponse(
+    const std::map<std::string, std::string>& responseHeaders) {
   try {
     setStatusLine();
-    setHeaders();
+    setHeaders(responseHeaders);
   } catch (std::exception& e) {
     std::cerr << "Exception: " << e.what() << std::endl;
   }
@@ -81,13 +82,13 @@ void HttpResponse::setStatusLine() {
   statusLine = ss.str();
 }
 
-void HttpResponse::setHeaders() {
+void HttpResponse::setHeaders(const std::map<std::string, std::string>& responseHeaders) {
   std::stringstream ss;
   ss << body.length();
   headers["Content-length"] = ss.str();
   headers["Server"] = "Default";
   if (status == 301)
-	headers["Location"] = body;
+    headers["Location"] = responseHeaders.at("Location");
   if (status != 200 && status != 301)
     headers["Connection"] = "close";
 }

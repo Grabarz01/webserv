@@ -17,9 +17,10 @@ class RequestHandler {
   std::string version;
   std::map<std::string, std::string> headers;
   std::string body;
-
+  
   unsigned int responseStatus;
   std::string responseContent;
+  std::map<std::string, std::string> responseHeaders;
   long conLen;
 
   // methods
@@ -37,7 +38,7 @@ class RequestHandler {
  public:
   RequestHandler(std::string rawRequest);
   ~RequestHandler();
-
+  const std::map<std::string, std::string>& getResponseHeaders(void);
   void handleRequest(ConfigTypes::ServerConfig& server);
   void printRequest();
   void autoIndex();

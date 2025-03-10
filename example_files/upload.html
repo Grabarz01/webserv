@@ -11,11 +11,31 @@
                 input.value = ""; // Resetuje pole wyboru plików
             }
         }
+
+        function handleUpload(event) {
+            event.preventDefault(); // Zapobiega domyślnemu wysłaniu formularza
+
+            let form = event.target;
+            let formData = new FormData(form);
+
+            fetch(form.action, {
+                method: "POST",
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = "http://localhost:8080/example_files/uploads";
+                } else {
+                    alert("Błąd podczas przesyłania plików!");
+                }
+            })
+            .catch(error => alert("Wystąpił błąd: " + error));
+        }
     </script>
 </head>
 <body>
     <h2>Wyślij pliki</h2>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
+    <form action="uploads" method="POST" enctype="multipart/form-data" onsubmit="handleUpload(event)">
         <label for="file">Wybierz pliki (maks. 4):</label>
         <input type="file" name="file[]" id="file" multiple onchange="validateFiles(this)">
         <br><br>

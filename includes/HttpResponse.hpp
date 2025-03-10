@@ -16,7 +16,9 @@ class HttpResponse {
   void setErrorPages(const std::map<unsigned int, std::string>& errorPages);
   void setBody(const std::string& responseBody);
   const char* getResponseAsString() const;
-  void generateResponse();
+  void generateResponse(
+      const std::map<std::string, std::string>& responseHeaders);
+
 
  private:
   unsigned int status;
@@ -27,7 +29,7 @@ class HttpResponse {
   std::string body;
 
   void setStatusLine();
-  void setHeaders();
+  void setHeaders(const std::map<std::string, std::string>& responseHeaders);
   std::string setBodyForError();
 };
 
