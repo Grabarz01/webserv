@@ -506,10 +506,14 @@ void RequestHandler::redirect(void) {
 }
 
 void RequestHandler::indexCheck() {
-  pathWithRoot.erase(pathWithRoot.begin());
-  pathWithRoot += routeConfig.index;
-  std::ifstream file(pathWithRoot.c_str());
+	std::string index_path = pathWithRoot.substr(1);
+  index_path += routeConfig.index;
+  std::ifstream file(index_path.c_str());
   if (!file.is_open()) {
+    if (routeConfig.autoindex == "on") {
+      autoIndex();
+      return;
+    }
     responseStatus = 404;
     return;
   }
