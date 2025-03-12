@@ -152,14 +152,16 @@ void Server::serverListen() {
     while (pollFdIt != pollFds.end()) {
       if (pollFdIt->revents & POLLIN) {
         if (std::distance(pollFds.begin(), pollFdIt) < hostPortPairs.size()) {
-          createPollFd(*pollFdIt, clientFdToIoSocketData[pollFdIt->fd].hostPortPair);
+          createPollFd(*pollFdIt,
+                       clientFdToIoSocketData[pollFdIt->fd].hostPortPair);
         } else {
           pollFdIt = receiveDataFromClient(pollFdIt);
           continue;
         }
       }
       if (pollFdIt->revents & POLLOUT) {
-        sendDataToClient(*pollFdIt);
+        pollFdIt = sendDataToClient(pollFdIt);
+        continue;
       }
       ++pollFdIt;
     }
@@ -196,6 +198,9 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
   int bytes_received = recv(pollFdIt->fd, buffer, sizeof(buffer), 0);
 
   if (bytes_received <= 0) {
+    if (bytes_received < 0)
+      std::cerr << "Warning: Recv fault: " + std::string(strerror(errno))
+                << std::endl;
     std::cout << "Connection closed by client\n" << std::endl;
     close(pollFdIt->fd);
     clientFdToIoSocketData.erase(pollFdIt->fd);
@@ -212,16 +217,16 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
   }
 }
 
-void Server::sendDataToClient(pollfd& clientFd) {
-  ioSocketData& socket = clientFdToIoSocketData.at(clientFd.fd);
-  if (socket.clientRequest.find("\r\n\r\n") == std::string::npos) {
-    return;
-  }
+std::vector<pollfd>::iterator Server::sendDataToClient(
+    std::vector<pollfd>::iterator pollFdIt) {
+  ioSocketData& socket = clientFdToIoSocketData.at(pollFdIt->fd);
+  if (socket.clientRequest.find("\r\n\r\n") == std::string::npos)
+    return ++pollFdIt;
+
   std::string serverName =
       getHeaderValue(socket.clientRequest, "Host: ", ":\n");
   std::cout << "Getting config for: " << socket.hostPortPair
             << " and serverName " << serverName << std::endl;
-
   ConfigTypes::ServerConfig server =
       serversConfig.getServerConfig(socket.hostPortPair, serverName);
   RequestHandler request(socket.clientRequest);
@@ -234,35 +239,32 @@ void Server::sendDataToClient(pollfd& clientFd) {
 
   const char* responseStr = response.getResponseAsString();
   int response_len = std::strlen(responseStr);
+  int sent = send(pollFdIt->fd, responseStr, response_len, 0);
 
-  send(clientFd.fd, responseStr, response_len, 0);
   std::stringstream ss(responseStr);
-  std::string http;
   std::string status;
-  ss >> http;
-  ss >> status;
+  ss >> status >> status;
+  std::cout << "**REQUEST RESPONDED with status " << status << "\n"
+            << std::endl;
+  // std::cout << "Content: \n" << responseStr << "\n";
 
   bool keepAlive = (socket.clientRequest.find("Connection: keep-alive") !=
                     std::string::npos);
   if (!keepAlive) {
-    close(clientFd.fd);
-    clientFdToIoSocketData.erase(clientFd.fd);
+    close(pollFdIt->fd);
+    clientFdToIoSocketData.erase(pollFdIt->fd);
+    return pollFds.erase(pollFdIt);
   } else {
     socket.clientRequest.clear();
-    clientFd.events = POLLIN;
-    // std::cout << "tu" << std::endl;
+    pollFdIt->events = POLLIN;
+    return ++pollFdIt;
   }
-
-  std::cout << "**REQUEST RESPONDED with status " << status << "\n"
-            << std::endl;
-  // std::cout << "Content: \n" << responseStr << "\n";
 }
 
 std::string Server::getHeaderValue(const std::string& clientRequest,
                                    const std::string& headerParameter,
                                    const std::string& endChars) {
   size_t headerParPos = clientRequest.find(headerParameter);
-  // std::cout << "clientRequest: " << clientRequest << std::endl;
   if (headerParPos == std::string::npos)
     throw std::runtime_error("Server failure: parameter " + headerParameter +
                              " not found in a request header");

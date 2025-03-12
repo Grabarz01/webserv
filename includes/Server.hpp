@@ -42,7 +42,8 @@ class Server {
   void createIoSocketData(int clientFd, std::string& hostPortPair);
   std::vector<pollfd>::iterator receiveDataFromClient(
       std::vector<pollfd>::iterator pollFdIt);
-  void sendDataToClient(pollfd& clientFd);
+  std::vector<pollfd>::iterator sendDataToClient(
+      std::vector<pollfd>::iterator pollFdIt);
 
   std::string getHeaderValue(const std::string& clientRequest,
                              const std::string& headerParameter,
