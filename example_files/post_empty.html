@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Operations</title>
+</head>
+<body>
+  <h1>Send Empty POST Request</h1>
+  <form action="http://localhost:8080/example_files/hello.py" method="POST">
+    <label for="name">Name (optional):</label>
+    <input type="text" id="name" name="name">
+    <br><br>
+    <button type="submit">Send Request</button>
+  </form>
+  
+  <h2>Send Completely Empty POST</h2>
+  <form action="http://localhost:8080/example_files/hello.py" method="GET">
+    <button type="submit">Send Empty POST</button>
+  </form>
+
+  <h2>Delete File</h2>
+  <form onsubmit="event.preventDefault(); sendDeleteRequest();">
+    <label for="filename">Filename:</label>
+    <input type="text" id="filename" name="filename" required>
+    <button type="submit">Delete File</button>
+  </form>
+
+  <script>
+    function sendDeleteRequest() {
+      const filename = document.getElementById('filename').value;
+      if (!filename) {
+        alert('Please enter a filename to delete.');
+        return;
+      }
+      
+      fetch(`http://localhost:8080/example_files/${filename}`, {
+        method: 'DELETE'
+      })
+      .then(response => response.text())
+      .then(data => alert('Response: ' + data))
+      .catch(error => console.error('Error:', error));
+    }
+  </script>
+</body>
+</html>

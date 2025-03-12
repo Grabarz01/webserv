@@ -17,6 +17,7 @@ class RequestHandler {
   std::string version;
   std::map<std::string, std::string> headers;
   std::string body;
+  std::string cgi_path;
   
   unsigned int responseStatus;
   std::string responseContent;
@@ -34,7 +35,7 @@ class RequestHandler {
   void redirect(void);
   void indexCheck(void);
   void uploadfile(void);
-
+	
  public:
   RequestHandler(std::string rawRequest);
   ~RequestHandler();
@@ -42,6 +43,7 @@ class RequestHandler {
   void handleRequest(ConfigTypes::ServerConfig& server);
   void printRequest();
   void autoIndex();
+  void setCgiPath(std::string cgi_path);
 
   const std::string& getRawRequest() const;
   const std::string& getResponseContent() const;
