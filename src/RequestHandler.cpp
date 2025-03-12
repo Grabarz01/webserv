@@ -160,9 +160,15 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   copyDefaultValuesToRouteConfig(routeConfig, server);
   setPathWithRoot();
 
-  if (!routeConfig.redirect.empty())
+  if (atoi(headers["Content-Length"].c_str()) >
+      atoi(routeConfig.maxBodySize.c_str())) {
+    responseStatus = 413;
+    return;
+  }
+
+  if (!routeConfig.redirect.empty()) {
     redirect();
-  else if (*path.rbegin() == '/') {
+  } else if (*path.rbegin() == '/') {
     if (!routeConfig.index.empty())
       indexCheck();
     else if (routeConfig.autoindex == "on")
@@ -318,11 +324,6 @@ void RequestHandler::getCgiHandler(size_t pos_py, size_t pos_query) {
 }
 
 void RequestHandler::postReq() {
-  if (atoi(headers["Content-Length"].c_str()) >
-      atoi(routeConfig.maxBodySize.c_str())) {
-    responseStatus = 413;
-    return;
-  }
   if (headers["Content-Type"].find("multipart/form-data") !=
       std::string::npos) {
     uploadfile();
