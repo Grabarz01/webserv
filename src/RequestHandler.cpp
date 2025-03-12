@@ -2,6 +2,7 @@
 
 #include <dirent.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <cstdlib>
@@ -214,6 +215,12 @@ void RequestHandler::getReq(void) {
 
   if (!pathWithRoot.empty() && *pathWithRoot.begin() == '/')
     pathWithRoot.erase(pathWithRoot.begin());
+
+  struct stat statbuf;
+  if (stat(pathWithRoot.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode)) {
+    responseStatus = 404;
+    return;
+  }
 
   std::ifstream file(pathWithRoot.c_str());
   if (!file.is_open()) {
@@ -507,7 +514,7 @@ void RequestHandler::redirect(void) {
 }
 
 void RequestHandler::indexCheck() {
-	std::string index_path = pathWithRoot.substr(1);
+  std::string index_path = pathWithRoot.substr(1);
   index_path += routeConfig.index;
   std::ifstream file(index_path.c_str());
   if (!file.is_open()) {
