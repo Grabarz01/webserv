@@ -83,7 +83,7 @@ void parseRoute(ConfigTypes::ServerConfig& server,
     std::string parameter;
     std::istringstream routeIss(line);
     routeIss >> parameter;
-    if (parameter.empty())
+    if (parameter.empty() || parameter.at(0) == '#')
       continue;
 
     ParameterType type = getParameterType(parameter);
@@ -161,7 +161,7 @@ void parseServer(ConfigTypes::ServerConfig& server, std::ifstream& file) {
     std::istringstream iss(line);
     iss >> parameter;
 
-    if (parameter.empty())
+    if (parameter.empty() || parameter.at(0) == '#')
       continue;
     ParameterType type = getParameterType(parameter);
     switch (type) {
