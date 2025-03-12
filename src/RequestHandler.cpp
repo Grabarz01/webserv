@@ -2,6 +2,7 @@
 
 #include <dirent.h>
 #include <stdio.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <cstdlib>
@@ -160,9 +161,15 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   setPathWithRoot();
   setCgiPath(server.cgiPath);
 
-  if (!routeConfig.redirect.empty())
+  if (atoi(headers["Content-Length"].c_str()) >
+      atoi(routeConfig.maxBodySize.c_str())) {
+    responseStatus = 413;
+    return;
+  }
+
+  if (!routeConfig.redirect.empty()) {
     redirect();
-  else if (*path.rbegin() == '/') {
+  } else if (*path.rbegin() == '/') {
     if (!routeConfig.index.empty())
       indexCheck();
     else if (routeConfig.autoindex == "on")
@@ -216,6 +223,12 @@ void RequestHandler::getReq(void) {
   if (!pathWithRoot.empty() && *pathWithRoot.begin() == '/')
     pathWithRoot.erase(pathWithRoot.begin());
 
+  struct stat statbuf;
+  if (stat(pathWithRoot.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode)) {
+    responseStatus = 404;
+    return;
+  }
+
   std::ifstream file(pathWithRoot.c_str());
   if (!file.is_open()) {
     responseStatus = 404;
@@ -266,11 +279,6 @@ void RequestHandler::getCgiHandler(size_t pos_py, size_t pos_query) {
 }
 
 void RequestHandler::postReq() {
-  if (atoi(headers["Content-Length"].c_str()) >
-      atoi(routeConfig.maxBodySize.c_str())) {
-    responseStatus = 413;
-    return;
-  }
   if (headers["Content-Type"].find("multipart/form-data") !=
       std::string::npos) {
     uploadfile();

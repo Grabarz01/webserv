@@ -195,10 +195,10 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
     std::vector<pollfd>::iterator pollFdIt) {
   char buffer[1024];
   std::memset(buffer, 0, sizeof(buffer));
-  int bytes_received = recv(pollFdIt->fd, buffer, sizeof(buffer), 0);
+  int bytesReceived = recv(pollFdIt->fd, buffer, sizeof(buffer), 0);
 
-  if (bytes_received <= 0) {
-    if (bytes_received < 0)
+  if (bytesReceived <= 0) {
+    if (bytesReceived < 0)
       std::cerr << "Warning: Recv fault: " + std::string(strerror(errno))
                 << std::endl;
     std::cout << "Connection with "
@@ -209,11 +209,11 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
     clientFdToIoSocketData.erase(pollFdIt->fd);
     return pollFds.erase(pollFdIt);
   } else {
-    std::string clientRequest(buffer, bytes_received);
+    std::string clientRequest(buffer, bytesReceived);
     clientFdToIoSocketData.at(pollFdIt->fd).clientRequest += clientRequest;
     std::cout << "**NEW REQUEST RECEIVED from "
               << clientFdToIoSocketData.at(pollFdIt->fd).hostPortPair
-              << std::endl;
+              << " - bytes received: " << bytesReceived << std::endl;
     if (!(pollFdIt->events & POLLOUT))
       pollFdIt->events |= POLLOUT;
     return ++pollFdIt;
@@ -242,7 +242,20 @@ std::vector<pollfd>::iterator Server::sendDataToClient(
 
   const char* responseStr = response.getResponseAsString();
   int responseLen = std::strlen(responseStr);
-  int sent = send(pollFdIt->fd, responseStr, responseLen, 0);
+  int totalSent = 0;
+  int remaining = responseLen;
+
+  while (totalSent < responseLen) {
+    int sent = send(pollFdIt->fd, responseStr + totalSent, remaining, 0);
+    if (sent < 0) {
+      std::cerr << "Warning: Send error: " << strerror(errno) << std::endl;
+      close(pollFdIt->fd);
+      clientFdToIoSocketData.erase(pollFdIt->fd);
+      return pollFds.erase(pollFdIt);
+    }
+    totalSent += sent;
+    remaining -= sent;
+  }
 
   std::stringstream ss(responseStr);
   std::string status;
