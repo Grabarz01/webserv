@@ -114,7 +114,6 @@ void RequestHandler::setRouteConfig(
 
   std::cout << "receivedRoute: " << route << std::endl;
   while (!route.empty()) {
-    // std::cout << "loopRoute: " << route << std::endl;
     if (serverConfig.routes.find(route) != serverConfig.routes.end()) {
       std::map<std::string, ConfigTypes::RouteConfig>::const_iterator it;
       it = serverConfig.routes.find(route);
@@ -167,6 +166,8 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
       indexCheck();
     else if (routeConfig.autoindex == "on")
       autoIndex();
+    else
+      responseStatus = 403;
   } else if (routeConfig.allowedMethods.find(method) ==
              routeConfig.allowedMethods.end()) {
     responseStatus = 405;

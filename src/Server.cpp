@@ -201,7 +201,10 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
     if (bytes_received < 0)
       std::cerr << "Warning: Recv fault: " + std::string(strerror(errno))
                 << std::endl;
-    std::cout << "Connection closed by client\n" << std::endl;
+    std::cout << "Connection with "
+              << clientFdToIoSocketData.at(pollFdIt->fd).hostPortPair
+              << " closed by client\n"
+              << std::endl;
     close(pollFdIt->fd);
     clientFdToIoSocketData.erase(pollFdIt->fd);
     return pollFds.erase(pollFdIt);
@@ -238,15 +241,16 @@ std::vector<pollfd>::iterator Server::sendDataToClient(
   response.generateResponse(request.getResponseHeaders());
 
   const char* responseStr = response.getResponseAsString();
-  int response_len = std::strlen(responseStr);
-  int sent = send(pollFdIt->fd, responseStr, response_len, 0);
+  int responseLen = std::strlen(responseStr);
+  int sent = send(pollFdIt->fd, responseStr, responseLen, 0);
 
   std::stringstream ss(responseStr);
   std::string status;
   ss >> status >> status;
   std::cout << "**REQUEST RESPONDED with status " << status << "\n"
             << std::endl;
-  // std::cout << "Content: \n" << responseStr << "\n";
+  // std::cout << "Content(" << responseLen <<"): \n" << responseStr <<
+  // std::endl;
 
   bool keepAlive = (socket.clientRequest.find("Connection: keep-alive") !=
                     std::string::npos);

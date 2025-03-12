@@ -63,7 +63,6 @@ void HttpResponse::generateResponse(
   }
   response.append("\r\n");
   response.append(body);
-  response.append("\r\n\r\n");
 };
 
 void HttpResponse::setStatusLine() {
