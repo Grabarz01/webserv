@@ -18,7 +18,8 @@ class RequestHandler {
   std::string version;
   std::map<std::string, std::string> headers;
   std::string body;
-  std::string cgi_path;
+  std::string cgiPathPython;
+  std::string cgiPathPhp;
   const std::vector<std::string> implementedMethods;
   
   unsigned int responseStatus;
@@ -45,7 +46,7 @@ class RequestHandler {
   void handleRequest(ConfigTypes::ServerConfig& server);
   void printRequest();
   void autoIndex();
-  void setCgiPath(std::string cgi_path);
+  void setCgiPath(std::string php, std::string python);
 
   const std::string& getRawRequest() const;
   const std::string& getResponseContent() const;

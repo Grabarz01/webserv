@@ -164,7 +164,7 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   setRouteConfig(server);
   copyDefaultValuesToRouteConfig(routeConfig, server);
   setPathWithRoot();
-  setCgiPath(server.cgiPath);
+  setCgiPath(server.cgiPathPhp, server.cgiPathPython);
 
   if (std::find(implementedMethods.begin(), implementedMethods.end(), method) ==
       implementedMethods.end()) {
@@ -178,7 +178,6 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
     responseStatus = 405;
     return;
   }
-
   if (atoi(headers["Content-Length"].c_str()) >
       atoi(routeConfig.maxBodySize.c_str())) {
     responseStatus = 413;
@@ -228,9 +227,10 @@ void RequestHandler::setPathWithRoot() {
 }
 
 void RequestHandler::getReq(void) {
- Cgi cgi;
+  Cgi cgi;
 
-  if(cgi.checkCgi(pathWithRoot, cgi_path, cgi_path, routeConfig.cgiAllowedExtensions) == 200){
+  if (cgi.checkCgi(pathWithRoot, cgiPathPython, cgiPathPhp,
+                   routeConfig.cgiAllowedExtensions) == 200) {
     getCgiHandler(cgi);
     return;
   }
@@ -256,15 +256,13 @@ void RequestHandler::getReq(void) {
   file.close();
 }
 
-// sprawdzic czy jest i czy jeset rozszerzenie
-void RequestHandler::getCgiHandler(Cgi &cgi) {
+void RequestHandler::getCgiHandler(Cgi& cgi) {
   int pipe_response[2];
   if (pipe(pipe_response) == -1) {
     std::cerr << "Fork failed\n";
     responseStatus = 500;
     return;
   }
-
   pid_t pid = fork();
   if (pid == -1) {
     std::cerr << "Fork failed\n";
@@ -278,7 +276,7 @@ void RequestHandler::getCgiHandler(Cgi &cgi) {
 
     cgi.extractEnvFromPath(pathWithRoot);
     cgi.setEnvp(method, headers);
-    cgi.setCgiPath(cgi_path);
+    cgi.setCgiPath(cgiPathPython, cgiPathPhp);
     cgi.setCgiScriptPath();
     cgi.runCgi();
 
@@ -299,10 +297,10 @@ void RequestHandler::postReq() {
     return;
   }
   Cgi cgi;
-  if ((responseStatus = cgi.checkCgi(pathWithRoot, cgi_path, cgi_path,
-                                     routeConfig.cgiAllowedExtensions)) !=
-      200)  // FIX
+  if ((responseStatus = cgi.checkCgi(pathWithRoot, cgiPathPython, cgiPathPhp,
+                                     routeConfig.cgiAllowedExtensions)) != 200)
     return;
+
   cgi.extractEnvFromPath(pathWithRoot);
 
   int pipe_input[2];
@@ -331,7 +329,7 @@ void RequestHandler::postReq() {
     close(pipe_response[1]);
 
     cgi.setEnvp(method, headers);
-    cgi.setCgiPath(cgi_path);
+    cgi.setCgiPath(cgiPathPython, cgiPathPhp);
     cgi.setCgiScriptPath();
     cgi.runCgi();
     perror("Execve failed\n");
@@ -532,6 +530,7 @@ void RequestHandler::uploadfile(void) {
   }
 }
 
-void RequestHandler::setCgiPath(std::string string) {
-  cgi_path = string;
+void RequestHandler::setCgiPath(std::string php, std::string python) {
+  cgiPathPython = python;
+  cgiPathPhp = php;
 }

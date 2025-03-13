@@ -45,7 +45,7 @@ class Cgi {
   void readResponse(std::string& responseContent,
                     unsigned int& responseStatus,
                     int* pipe_response);
-  void setCgiPath(std::string cgi_path);
+  void setCgiPath(std::string cgiPathPython, std::string cgiPathPhp);
   void setCgiScriptPath();
   void setEnvp(std::string& method,
                std::map<std::string, std::string>& headers);
