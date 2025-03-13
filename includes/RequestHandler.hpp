@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include "Config.hpp"
+#include "Cgi.hpp"
 
 class RequestHandler {
  private:
@@ -31,7 +32,7 @@ class RequestHandler {
   void getReq(void);
   void postReq(void);
   void deleteReq(void);
-  void getCgiHandler(size_t pos_py, size_t pos_query);
+  void getCgiHandler(Cgi &cgi);
   void setPathWithRoot(void);
   void redirect(void);
   void indexCheck(void);
