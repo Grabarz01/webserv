@@ -18,6 +18,7 @@ class RequestHandler {
   std::map<std::string, std::string> headers;
   std::string body;
   std::string cgi_path;
+  const std::vector<std::string> implementedMethods;
   
   unsigned int responseStatus;
   std::string responseContent;

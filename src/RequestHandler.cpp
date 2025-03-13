@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -43,8 +44,16 @@ void copyDefaultValuesToRouteConfig(
 
 }  // namespace
 
+static std::vector<std::string> initImplementedMethods() {
+  const std::string methods[] = {"GET", "POST", "DELETE"};
+  const size_t count = sizeof(methods) / sizeof(methods[0]);
+  return std::vector<std::string>(methods, methods + count);
+}
+
 RequestHandler::RequestHandler(std::string rawRequest)
-    : rawRequest(rawRequest), responseStatus(200) {
+    : rawRequest(rawRequest),
+      responseStatus(200),
+      implementedMethods(initImplementedMethods()) {
   parseRequest();
 };
 RequestHandler::~RequestHandler() {};
@@ -161,26 +170,39 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   setPathWithRoot();
   setCgiPath(server.cgiPath);
 
+  if (std::find(implementedMethods.begin(), implementedMethods.end(), method) ==
+      implementedMethods.end()) {
+    responseStatus = 501;
+    return;
+  }
+
+  if (std::find(routeConfig.allowedMethods.begin(),
+                routeConfig.allowedMethods.end(),
+                method) == routeConfig.allowedMethods.end()) {
+    responseStatus = 405;
+    return;
+  }
+
   if (atoi(headers["Content-Length"].c_str()) >
       atoi(routeConfig.maxBodySize.c_str())) {
     responseStatus = 413;
     return;
   }
 
-  if (!routeConfig.redirect.empty()) {
+  if (!routeConfig.redirect.empty())
     redirect();
-  } else if (*path.rbegin() == '/') {
-    if (!routeConfig.index.empty())
-      indexCheck();
-    else if (routeConfig.autoindex == "on")
-      autoIndex();
-    else
-      responseStatus = 403;
-  } else if (routeConfig.allowedMethods.find(method) ==
-             routeConfig.allowedMethods.end()) {
-    responseStatus = 405;
-  } else if (method == "GET") {
-    getReq();
+
+  if (method == "GET") {
+    if (*path.rbegin() == '/') {
+      if (!routeConfig.index.empty())
+        indexCheck();
+      else if (routeConfig.autoindex == "on")
+        autoIndex();
+      else
+        responseStatus = 403;
+    } else {
+      getReq();
+    }
   } else if (method == "POST") {
     postReq();
   } else if (method == "DELETE") {
@@ -273,7 +295,7 @@ void RequestHandler::getCgiHandler(size_t pos_py, size_t pos_query) {
   } else {
     // server
     close(pipe_response[1]);
-	cgi.readResponse(responseContent,responseStatus,pipe_response);
+    cgi.readResponse(responseContent, responseStatus, pipe_response);
     waitpid(pid, NULL, 0);
   }
 }

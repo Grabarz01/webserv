@@ -17,7 +17,8 @@ static const HttpError httpErrors[] = {{200, "OK"},
                                        {403, "Forbidden"},
                                        {404, "Not Found"},
                                        {405, "Method Not Allowed"},
-                                       {500, "Internal Server Error"}};
+                                       {500, "Internal Server Error"},
+                                       {501, "Not Implemented"}};
 
 static const size_t httpErrorsCount =
     sizeof(httpErrors) / sizeof(httpErrors[0]);
