@@ -17,29 +17,25 @@
 
 namespace {
 
+template <typename T>
+void assignIfEmpty(T& target, const T& defaultValue) {
+  if (target.empty())
+    target = defaultValue;
+}
+
 void copyDefaultValuesToRouteConfig(
     ConfigTypes::RouteConfig& routeConfig,
     const ConfigTypes::ServerConfig& serverConfig) {
-  if (routeConfig.root.empty())
-    routeConfig.root = serverConfig.defaultRoute.root;
-  if (routeConfig.index.empty())
-    routeConfig.index = serverConfig.defaultRoute.index;
-  if (routeConfig.allowedMethods.empty())
-    routeConfig.allowedMethods = serverConfig.defaultRoute.allowedMethods;
-  if (routeConfig.cgiAllowedExtensions.empty())
-    routeConfig.cgiAllowedExtensions =
-        serverConfig.defaultRoute.cgiAllowedExtensions;
-  if (routeConfig.redirect.empty())
-    routeConfig.redirect = serverConfig.defaultRoute.redirect;
-  if (routeConfig.maxBodySize.empty())
-    routeConfig.maxBodySize = serverConfig.defaultRoute.maxBodySize;
-  if (routeConfig.autoindex.empty() &&
-      !serverConfig.defaultRoute.autoindex.empty())
-    routeConfig.autoindex = serverConfig.defaultRoute.autoindex;
-  else if (routeConfig.autoindex.empty())
-    routeConfig.autoindex = "off";
-  if (routeConfig.uploadPath.empty())
-    routeConfig.uploadPath = serverConfig.defaultRoute.uploadPath;
+  assignIfEmpty(routeConfig.root, serverConfig.defaultRoute.root);
+  assignIfEmpty(routeConfig.index, serverConfig.defaultRoute.index);
+  assignIfEmpty(routeConfig.allowedMethods,
+                serverConfig.defaultRoute.allowedMethods);
+  assignIfEmpty(routeConfig.cgiAllowedExtensions,
+                serverConfig.defaultRoute.cgiAllowedExtensions);
+  assignIfEmpty(routeConfig.redirect, serverConfig.defaultRoute.redirect);
+  assignIfEmpty(routeConfig.maxBodySize, serverConfig.defaultRoute.maxBodySize);
+  assignIfEmpty(routeConfig.autoindex, serverConfig.defaultRoute.autoindex);
+  assignIfEmpty(routeConfig.uploadPath, serverConfig.defaultRoute.uploadPath);
 }
 
 }  // namespace
