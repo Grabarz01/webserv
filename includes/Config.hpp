@@ -22,7 +22,9 @@ struct RouteConfig {
 struct ServerConfig {
   std::set<std::string> hostPortPairs;
   std::set<std::string> serverNames;
-  std::string cgiPath;
+  std::string cgiPath; //TODO: delete
+  std::string cgiPathPython;
+  std::string cgiPathPhp;
   std::map<unsigned int, std::string> errorPages;
   RouteConfig defaultRoute;
   std::map<std::string, RouteConfig> routes;
