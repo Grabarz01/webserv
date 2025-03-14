@@ -39,10 +39,10 @@ void HttpResponse::setStatus(const unsigned int responseStatus) {
   this->status = responseStatus;
 };
 
-const char* HttpResponse::getResponseAsString() const {
+std::string HttpResponse::getResponse() const {
   if (response.empty())
     throw std::runtime_error("Response has not been generated");
-  return (response.c_str());
+  return (response);
 };
 
 void HttpResponse::generateResponse(
@@ -82,9 +82,11 @@ void HttpResponse::setStatusLine() {
   statusLine = ss.str();
 }
 
-void HttpResponse::setHeaders(const std::map<std::string, std::string>& responseHeaders) {
+void HttpResponse::setHeaders(
+    const std::map<std::string, std::string>& responseHeaders) {
   std::stringstream ss;
   ss << body.length();
+  headers["Content-type"] = "text/html; charset=UTF-8";
   headers["Content-length"] = ss.str();
   headers["Server"] = "Default";
   if (status == 301)

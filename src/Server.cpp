@@ -139,7 +139,7 @@ void Server::serverListen() {
   std::signal(SIGTERM, Server::signalHandler);
 
   // pollFds = listenFds + clientFds
-  pollFds.reserve(100);
+  pollFds.reserve(1000);
   while (running) {
     if (poll(&pollFds[0], pollFds.size(), 100) < 0) {
       if (errno == EINTR)
@@ -160,7 +160,10 @@ void Server::serverListen() {
         }
       }
       if (pollFdIt->revents & POLLOUT) {
-        pollFdIt = sendDataToClient(pollFdIt);
+        std::string response;
+        generateResponse(pollFdIt, response);
+        pollFdIt = sendDataToClient(pollFdIt, response);
+
         continue;
       }
       ++pollFdIt;
@@ -220,14 +223,21 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
   }
 }
 
-std::vector<pollfd>::iterator Server::sendDataToClient(
-    std::vector<pollfd>::iterator pollFdIt) {
+void Server::generateResponse(std::vector<pollfd>::iterator pollFdIt,
+                              std::string& response) {
   ioSocketData& socket = clientFdToIoSocketData.at(pollFdIt->fd);
-  if (socket.clientRequest.find("\r\n\r\n") == std::string::npos)
-    return ++pollFdIt;
 
   std::string serverName =
       getHeaderValue(socket.clientRequest, "Host: ", ":\n");
+  if (serverName.empty()) {
+    HttpResponse httpResponse;
+    httpResponse.configure(400, std::map<unsigned int, std::string>(),
+                           std::string());
+    httpResponse.generateResponse(std::map<std::string, std::string>());
+    response = httpResponse.getResponse();
+    return;
+  }
+
   std::cout << "Getting config for: " << socket.hostPortPair
             << " and serverName " << serverName << std::endl;
   ConfigTypes::ServerConfig server =
@@ -235,18 +245,23 @@ std::vector<pollfd>::iterator Server::sendDataToClient(
   RequestHandler request(socket.clientRequest);
   request.handleRequest(server);
 
-  HttpResponse response;
-  response.configure(request.getResponseStatus(), server.errorPages,
-                     request.getResponseContent());
-  response.generateResponse(request.getResponseHeaders());
+  HttpResponse httpResponse;
+  httpResponse.configure(request.getResponseStatus(), server.errorPages,
+                         request.getResponseContent());
+  httpResponse.generateResponse(request.getResponseHeaders());
+  response = httpResponse.getResponse();
+}
 
-  const char* responseStr = response.getResponseAsString();
-  int responseLen = std::strlen(responseStr);
+std::vector<pollfd>::iterator Server::sendDataToClient(
+    std::vector<pollfd>::iterator pollFdIt,
+    std::string& response) {
+  const char* respAsStr = response.c_str();
+  int responseLen = std::strlen(respAsStr);
   int totalSent = 0;
   int remaining = responseLen;
 
   while (totalSent < responseLen) {
-    int sent = send(pollFdIt->fd, responseStr + totalSent, remaining, 0);
+    int sent = send(pollFdIt->fd, respAsStr + totalSent, remaining, 0);
     if (sent < 0) {
       std::cerr << "Warning: Send error: " << strerror(errno) << std::endl;
       close(pollFdIt->fd);
@@ -257,22 +272,21 @@ std::vector<pollfd>::iterator Server::sendDataToClient(
     remaining -= sent;
   }
 
-  std::stringstream ss(responseStr);
+  std::stringstream ss(respAsStr);
   std::string status;
   ss >> status >> status;
   std::cout << "**REQUEST RESPONDED with status " << status << "\n"
             << std::endl;
-  // std::cout << "Content(" << responseLen <<"): \n" << responseStr <<
-  // std::endl;
 
-  bool keepAlive = (socket.clientRequest.find("Connection: keep-alive") !=
-                    std::string::npos);
+  bool keepAlive =
+      (clientFdToIoSocketData.at(pollFdIt->fd)
+           .clientRequest.find("Connection: keep-alive") != std::string::npos);
   if (!keepAlive) {
     close(pollFdIt->fd);
     clientFdToIoSocketData.erase(pollFdIt->fd);
     return pollFds.erase(pollFdIt);
   } else {
-    socket.clientRequest.clear();
+    clientFdToIoSocketData.at(pollFdIt->fd).clientRequest.clear();
     pollFdIt->events = POLLIN;
     return ++pollFdIt;
   }
@@ -283,8 +297,7 @@ std::string Server::getHeaderValue(const std::string& clientRequest,
                                    const std::string& endChars) {
   size_t headerParPos = clientRequest.find(headerParameter);
   if (headerParPos == std::string::npos)
-    throw std::runtime_error("Server failure: parameter " + headerParameter +
-                             " not found in a request header");
+    return "";
   size_t startPos = headerParPos + headerParameter.size();
   size_t endPos = clientRequest.find_first_of(endChars, startPos);
   return (clientRequest.substr(startPos, endPos - startPos));

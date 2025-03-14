@@ -1,13 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hello World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebServ Project</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            text-align: center;
+        }
+        .frame {
+            max-width: 700px;
+            padding: 3rem;
+            border: 1px solid #4a90e2;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            background: linear-gradient(to bottom, #ffffff, #f9f9f9);
+        }
+        .container {
+            max-width: 600px;
+        }
+        h1 {
+            color: #4a90e2;
+            margin-bottom: 1.5rem;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .logo {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 1.5rem;
+        }
+        .pulse {
+            animation: pulse 4s infinite alternate;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.85; }
+            50% { opacity: 1; }
+            100% { opacity: 0.85; }
+        }
+    </style>
 </head>
 <body>
-  <h1>Hello World!</h1>
-  <p>It works!</p>
-  <img src="https://i.pinimg.com/originals/38/05/13/3805133736b15e2de11553d99384779e.gif" alt="Confirmation">
+    <div class="frame">
+        <div class="container">
+            <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Server icon base -->
+                <rect x="25" y="25" width="50" height="50" rx="4" fill="#f0f0f0" stroke="#4a90e2" stroke-width="2" />
+                
+                <!-- Server slots -->
+                <rect x="30" y="35" width="40" height="6" rx="1" fill="#4a90e2" class="pulse" />
+                <rect x="30" y="47" width="40" height="6" rx="1" fill="#4a90e2" class="pulse" />
+                <rect x="30" y="59" width="40" height="6" rx="1" fill="#4a90e2" class="pulse" />
+              
+                
+            </svg>
+            <h1>Welcome to WebServ!</h1>
+            <p>Congratulations! Your server is up and running successfully. This page confirms that your web server implementation is working properly.</p>
+            <p>Keep up the good work!</p>
+        </div>
+    </div>
 </body>
 </html>

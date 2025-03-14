@@ -58,6 +58,7 @@ const std::map<std::string, std::string>& RequestHandler::getResponseHeaders(
     void) {
   return this->responseHeaders;
 }
+
 void RequestHandler::parseRequest() {
   std::istringstream req(rawRequest);
   req >> this->method >> this->path >> this->version;
@@ -119,7 +120,7 @@ void RequestHandler::setRouteConfig(
     route = route.substr(0, queryPos);
   }
 
-  std::cout << "receivedRoute: " << route << std::endl;
+  // std::cout << "receivedRoute: " << route << std::endl;
   while (!route.empty()) {
     if (serverConfig.routes.find(route) != serverConfig.routes.end()) {
       std::map<std::string, ConfigTypes::RouteConfig>::const_iterator it;
@@ -226,7 +227,7 @@ void RequestHandler::setPathWithRoot() {
 
   pathWithRoot = routeConfig.root + path.substr(route.size(), path.size());
 
-  std::cout << "pathWithRoot: " << pathWithRoot << std::endl;
+  // std::cout << "pathWithRoot: " << pathWithRoot << std::endl;
 }
 
 void RequestHandler::getReq(void) {

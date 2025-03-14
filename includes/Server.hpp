@@ -43,7 +43,10 @@ class Server {
   std::vector<pollfd>::iterator receiveDataFromClient(
       std::vector<pollfd>::iterator pollFdIt);
   std::vector<pollfd>::iterator sendDataToClient(
-      std::vector<pollfd>::iterator pollFdIt);
+      std::vector<pollfd>::iterator pollFdIt,
+      std::string& response);
+  void generateResponse(std::vector<pollfd>::iterator pollFdIt,
+                        std::string& response);
 
   std::string getHeaderValue(const std::string& clientRequest,
                              const std::string& headerParameter,

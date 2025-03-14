@@ -15,7 +15,7 @@ class HttpResponse {
   void setStatus(const unsigned int responseStatus);
   void setErrorPages(const std::map<unsigned int, std::string>& errorPages);
   void setBody(const std::string& responseBody);
-  const char* getResponseAsString() const;
+  std::string getResponse() const;
   void generateResponse(
       const std::map<std::string, std::string>& responseHeaders);
 
