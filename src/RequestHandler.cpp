@@ -75,8 +75,9 @@ void RequestHandler::parseRequest() {
       headers[key] = value;
     }
   }
-
-  if (headers.find("Transfer-Encoding") != headers.end() &&
+  if (routeConfig.maxBodySize < headers["Content-Length"])
+  	return;
+  else if (headers.find("Transfer-Encoding") != headers.end() &&
       headers["Transfer-Encoding"] == "chunked") {
     std::string chunk_size_str;
     while (std::getline(req, chunk_size_str) && chunk_size_str != "\r") {
@@ -184,8 +185,10 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
     return;
   }
 
-  if (!routeConfig.redirect.empty())
+  if (!routeConfig.redirect.empty()) {
     redirect();
+    return;
+  }
 
   if (method == "GET") {
     if (*path.rbegin() == '/') {

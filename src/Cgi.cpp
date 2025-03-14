@@ -96,10 +96,10 @@ void Cgi::setEnvp(std::string& method,
   cgiEnvp[5] = new char[pathInfo.size() + 1];
   std::strcpy(cgiEnvp[5], pathInfo.c_str());
   cgiEnvp[6] = NULL;
-//   for (size_t i = 0; i < 6; ++i) {
-//     std::cerr << "[" << i << "] " << cgiEnvp[i] << std::endl;
-//     std::cerr.flush();
-//   }
+  //   for (size_t i = 0; i < 6; ++i) {
+  //     std::cerr << "[" << i << "] " << cgiEnvp[i] << std::endl;
+  //     std::cerr.flush();
+  //   }
 }
 
 void Cgi::setCgiPath(std::string cgiPathPython, std::string cgiPathPhp) {
@@ -129,6 +129,7 @@ char* Cgi::getScriptPath() {
 
 void Cgi::runCgi(void) {
   char* args[] = {cgiPath, cgiScriptPath, NULL};
+
   execve(cgiScriptPath, args, cgiEnvp);
 }
 
@@ -144,17 +145,15 @@ void Cgi::readResponse(std::string& responseContent,
   }
 
   if (bytesRead == -1) {
-    responseStatus = 500;
-    responseContent = "CGI script error";
-  }
-  close(pipe_response[0]);
-
-  size_t pos = responseContent.find("\r\n\r\n");
-  if (pos == std::string::npos) {
-    responseStatus = 500;
-    responseContent = "Malformed CGI response";
-    return;
-  }
+	  responseStatus = 500;
+	}
+	close(pipe_response[0]);
+	
+	size_t pos = responseContent.find("\r\n\r\n");
+	if (pos == std::string::npos) {
+		responseStatus = 500;
+		return;
+	}
   std::string cgi_headers = responseContent.substr(0, pos);
   responseContent = responseContent.substr(pos + 4);
 
@@ -186,7 +185,8 @@ int Cgi::checkCgi(std::string pathWithRoot,
   posPython = pathWithRoot.find(".py");
   posQuery = pathWithRoot.find("?");
 
-  if (posPhp > posQuery && posPython > posQuery)
+  if (posPhp > posQuery && posPython > posQuery &&
+      posQuery != std::string::npos)
     return 400;
   if (posPhp != std::string::npos && posPython != std::string::npos) {
     cgiExtension = posPython < posPhp ? CGI_PYTHON : CGI_PHP;
@@ -195,6 +195,7 @@ int Cgi::checkCgi(std::string pathWithRoot,
   } else
     return 400;
 
+  std::cout << cgiPathPhp << std::endl;
   posCgiExt = cgiExtension == CGI_PYTHON ? posPython : posPhp;
   if (cgiExtension == CGI_PYTHON) {
     if ((posCgiExt > posQuery && posQuery != std::string::npos) ||
@@ -202,10 +203,11 @@ int Cgi::checkCgi(std::string pathWithRoot,
         std::find(ext.begin(), ext.end(), ".py") == ext.end())
       return 400;
   } else {
-    if ((posCgiExt > posQuery && posQuery != std::string::npos) ||
-        cgiPathPhp.empty() ||
-        std::find(ext.begin(), ext.end(), ".php") == ext.end())
-      return 400;
+	  if ((posCgiExt > posQuery && posQuery != std::string::npos) ||
+	  cgiPathPhp.empty() ||
+	  std::find(ext.begin(), ext.end(), ".php") == ext.end()) {
+		  return 400;
+    }
   }
   return 200;
 }
