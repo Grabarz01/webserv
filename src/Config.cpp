@@ -70,8 +70,8 @@ void setDefaultValues(ConfigTypes::ServerConfig& server) {
   }
   if (server.defaultRoute.maxBodySize.empty())
     server.defaultRoute.maxBodySize = "1024";
-  if (server.defaultRoute.index.empty())
-    server.defaultRoute.index = "off";
+  if (server.defaultRoute.autoindex.empty())
+    server.defaultRoute.autoindex = "off";
 }
 
 void setRouteParameterValue(ParameterType type,

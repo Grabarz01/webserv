@@ -191,7 +191,7 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   }
 
   if (method == "GET") {
-    if (*path.rbegin() == '/') {
+    if (*pathWithRoot.rbegin() == '/') {
       if (!routeConfig.index.empty())
         indexCheck();
       else if (routeConfig.autoindex == "on")
