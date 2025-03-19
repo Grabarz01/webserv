@@ -23,9 +23,6 @@ static const HttpError httpErrors[] = {{200, "OK"},
 static const size_t httpErrorsCount =
     sizeof(httpErrors) / sizeof(httpErrors[0]);
 
-HttpResponse::HttpResponse() {};
-HttpResponse::~HttpResponse() {};
-
 void HttpResponse::configure(
     const unsigned int responseStatus,
     const std::map<unsigned int, std::string>& errorPages,

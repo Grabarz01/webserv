@@ -62,21 +62,6 @@ Server::Server(Config& serversConfig) : serversConfig(serversConfig) {
   setHostPortPairs(serversConfig.getHostPortPairsForConfig());
 }
 
-Server::Server(const Server& other)
-    : serversConfig(other.serversConfig),
-      hostPortPairs(other.hostPortPairs),
-      serverNames(other.serverNames) {}
-
-Server::~Server() {}
-
-const Server& Server::operator=(const Server& other) {
-  if (&other == this)
-    return *this;
-  this->hostPortPairs = other.hostPortPairs;
-  this->serverNames = other.serverNames;
-  return (*this);
-}
-
 void Server::setNonblocking(int socket) {
   int flags = fcntl(socket, F_GETFL, 0);
   fcntl(socket, F_SETFL, flags | O_NONBLOCK);

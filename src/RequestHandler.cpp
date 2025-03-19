@@ -52,7 +52,6 @@ RequestHandler::RequestHandler(std::string rawRequest)
       implementedMethods(initImplementedMethods()) {
   parseRequest();
 };
-RequestHandler::~RequestHandler() {};
 
 const std::map<std::string, std::string>& RequestHandler::getResponseHeaders(
     void) {
@@ -77,9 +76,9 @@ void RequestHandler::parseRequest() {
     }
   }
   if (routeConfig.maxBodySize < headers["Content-Length"])
-  	return;
+    return;
   else if (headers.find("Transfer-Encoding") != headers.end() &&
-      headers["Transfer-Encoding"] == "chunked") {
+           headers["Transfer-Encoding"] == "chunked") {
     std::string chunk_size_str;
     while (std::getline(req, chunk_size_str) && chunk_size_str != "\r") {
       if (!chunk_size_str.empty() &&
