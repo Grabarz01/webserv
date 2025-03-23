@@ -166,7 +166,6 @@ void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
   copyDefaultValuesToRouteConfig(routeConfig, server);
   setPathWithRoot();
   setCgiPath(server.cgiPathPhp, server.cgiPathPython);
-
   if (std::find(implementedMethods.begin(), implementedMethods.end(), method) ==
       implementedMethods.end()) {
     responseStatus = 501;
@@ -226,12 +225,11 @@ void RequestHandler::setPathWithRoot() {
 
   pathWithRoot = routeConfig.root + path.substr(route.size(), path.size());
 
-  // std::cout << "pathWithRoot: " << pathWithRoot << std::endl;
+  std::cout << "pathWithRoot: " << pathWithRoot << std::endl;
 }
 
 void RequestHandler::getReq(void) {
   Cgi cgi;
-
   if (cgi.checkCgi(pathWithRoot, cgiPathPython, cgiPathPhp,
                    routeConfig.cgiAllowedExtensions) == 200) {
     getCgiHandler(cgi);
@@ -389,17 +387,31 @@ void RequestHandler::autoIndex() {
   }
 
   responseContent =
-      "<html><body><h2>Directory Listing: " + std::string(pathlisting) +
-      "</h2><ul>";
-
+      "<html><head><title>Directory Listing</title>"
+      "<style>"
+      "body { font-family: Arial, sans-serif; background-color: #f4f4f4; "
+      "margin: 20px; }"
+      "h2 { color: #fff; text-align: center; }"
+      ".listing-container { background: #333; padding: 20px; border-radius: "
+      "10px; "
+      "    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); max-width: 600px; "
+      "margin: auto; }"
+      "ul { list-style: none; padding: 0; margin: 0; }"
+      "li { margin: 8px 0; display: flex; align-items: center; }"
+      "a { text-decoration: none; color: #fff; font-size: 16px; }"
+      "img { width: 16px; height: 16px; margin-right: 10px; }"
+      "</style></head>"
+      "<body><div class='listing-container'><h2>Directory Listing: " +
+      pathlisting + "</h2><ul>";
+	  
   struct dirent* entry;
   while ((entry = readdir(dir)) != NULL) {
     std::string entryName = entry->d_name;
     if (entryName == "." || entryName == "..") {
       continue;
     }
-
-    responseContent += "<li><a href=\"" + pathWithRoot + entryName;
+    std::string icon = (entry->d_type == DT_DIR) ? "📁" : "📄";
+    responseContent += "<li>" + icon + " <a href=\"" + pathWithRoot + entryName;
     if (entry->d_type == DT_DIR) {
       responseContent += "/\">" + entryName + "/</a></li>";
     } else {
@@ -429,6 +441,13 @@ void RequestHandler::redirect(void) {
 void RequestHandler::indexCheck() {
   std::string index_path = pathWithRoot.substr(1);
   index_path += routeConfig.index;
+
+  struct stat statbuf;
+  if (stat(index_path.c_str(), &statbuf) == 0 && S_ISDIR(statbuf.st_mode)) {
+    responseStatus = 404;
+    return;
+  }
+  
   std::ifstream file(index_path.c_str());
   if (!file.is_open()) {
     if (routeConfig.autoindex == "on") {
@@ -443,7 +462,6 @@ void RequestHandler::indexCheck() {
   buffer << file.rdbuf();
   responseContent = buffer.str();
   file.close();
-  responseStatus = 200;
 }
 
 void RequestHandler::uploadfile(void) {
@@ -517,7 +535,7 @@ void RequestHandler::uploadfile(void) {
     std::cout << filename << std::endl;
     std::ofstream file(filename.c_str(), std::ios::binary);
     if (!file) {
-      std::cerr << "Błąd: nie można otworzyć pliku " << filename << std::endl;
+      std::cerr << "ERR: Cannot Open the file: " << filename << std::endl;
       responseStatus = 403;
       return;
     }

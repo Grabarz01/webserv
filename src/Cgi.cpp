@@ -46,7 +46,7 @@ std::string Cgi::extractPathInfo(std::string& path, size_t size) {
 std::string Cgi::extractScriptPath(std::string& path, size_t size) {
   std::string result;
   result = path.substr(1, posCgiExt + size - 1);
-  std::cerr << result;
+  std::cerr << result << std::endl;
   return result;
 }
 std::string Cgi::getQuery() {
@@ -129,7 +129,6 @@ char* Cgi::getScriptPath() {
 
 void Cgi::runCgi(void) {
   char* args[] = {cgiPath, cgiScriptPath, NULL};
-
   execve(cgiScriptPath, args, cgiEnvp);
 }
 
@@ -145,31 +144,9 @@ void Cgi::readResponse(std::string& responseContent,
   }
 
   if (bytesRead == -1) {
-	  responseStatus = 500;
-	}
-	close(pipe_response[0]);
-	
-	size_t pos = responseContent.find("\r\n\r\n");
-	if (pos == std::string::npos) {
-		responseStatus = 500;
-		return;
-	}
-  std::string cgi_headers = responseContent.substr(0, pos);
-  responseContent = responseContent.substr(pos + 4);
-
-  std::istringstream headerStream(cgi_headers);
-  std::string line;
-  std::map<std::string, std::string> headers_map;
-  while (std::getline(headerStream, line) && !line.empty()) {
-    if (!line.empty() && *(line.rbegin()) == '\r') {
-      line.erase(line.size() - 1);
-    }
-
-    if (line.find("Status:") == 0) {
-      std::string statusCode = line.substr(7);
-      responseStatus = std::atoi(statusCode.c_str());
-    }
+    responseStatus = 500;
   }
+  close(pipe_response[0]);
 }
 
 int Cgi::checkCgi(std::string pathWithRoot,
@@ -195,19 +172,19 @@ int Cgi::checkCgi(std::string pathWithRoot,
   } else
     return 400;
 
-  std::cout << cgiPathPhp << std::endl;
   posCgiExt = cgiExtension == CGI_PYTHON ? posPython : posPhp;
   if (cgiExtension == CGI_PYTHON) {
     if ((posCgiExt > posQuery && posQuery != std::string::npos) ||
-        cgiPathPython.empty() ||
-        std::find(ext.begin(), ext.end(), ".py") == ext.end())
+        cgiPathPython.empty())
       return 400;
+    else if (std::find(ext.begin(), ext.end(), ".py") == ext.end())
+      return 403;
   } else {
-	  if ((posCgiExt > posQuery && posQuery != std::string::npos) ||
-	  cgiPathPhp.empty() ||
-	  std::find(ext.begin(), ext.end(), ".php") == ext.end()) {
-		  return 400;
-    }
+    if ((posCgiExt > posQuery && posQuery != std::string::npos) ||
+        cgiPathPhp.empty())
+      return 400;
+    else if (std::find(ext.begin(), ext.end(), ".php") == ext.end())
+      return 403;
   }
   return 200;
 }
