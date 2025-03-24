@@ -13,6 +13,8 @@ struct HttpError {
 static const HttpError httpErrors[] = {{200, "OK"},
                                        {400, "Bad Request"},
                                        {301, "Moved Permanently"},
+									   {302, "Found"},
+									   {303, "See Other"},
                                        {413, "Request Entity Too Large"},
                                        {403, "Forbidden"},
                                        {404, "Not Found"},
@@ -86,16 +88,16 @@ void HttpResponse::setHeaders(
   headers["Content-type"] = "text/html; charset=UTF-8";
   headers["Content-length"] = ss.str();
   headers["Server"] = "Default";
-  if (status == 301)
+  if (status == 301 || status == 302 || status == 303)
     headers["Location"] = responseHeaders.at("Location");
-  if (status != 200 && status != 301)
+  if (status != 200 && status != 301 && status != 302 && status != 303)
     headers["Connection"] = "close";
 }
 
 void HttpResponse::setBody(const std::string& responseBody) {
   if ((status == 200 || status == 301) && !responseBody.empty())
     body = responseBody;
-  if (status != 200 && status != 301)
+  if (status != 200 && (status != 301 && status != 302 && status != 303))
     body = setBodyForError();
 }
 

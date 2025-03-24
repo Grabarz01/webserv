@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        canvas {
+            border: 2px solid #000;
+            background-color: #000;
+        }
+
+        #score {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <div id="score">Score: 0</div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+    </div>
+
+    <script>
+        // Get the canvas and context
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Game settings
+        const gridSize = 20;
+        const canvasSize = 400;
+        const speed = 100;
+
+        let snake = [{ x: 8 * gridSize, y: 8 * gridSize }];
+        let food = { x: 5 * gridSize, y: 5 * gridSize };
+        let dx = gridSize;
+        let dy = 0;
+        let score = 0;
+
+        // Listen to key presses to change snake direction
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowUp" && dy === 0) {
+                dx = 0;
+                dy = -gridSize;
+            } else if (event.key === "ArrowDown" && dy === 0) {
+                dx = 0;
+                dy = gridSize;
+            } else if (event.key === "ArrowLeft" && dx === 0) {
+                dx = -gridSize;
+                dy = 0;
+            } else if (event.key === "ArrowRight" && dx === 0) {
+                dx = gridSize;
+                dy = 0;
+            }
+        });
+
+        // Main game function
+        function game() {
+            // Move snake
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            // Check for game over
+            if (head.x < 0 || head.x >= canvasSize || head.y < 0 || head.y >= canvasSize || isCollision(head)) {
+                alert("Game Over!");
+                resetGame();
+                return;
+            }
+
+            // Add new head to snake
+            snake.unshift(head);
+
+            // Check if snake ate the food
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                document.getElementById("score").textContent = `Score: ${score}`;
+                generateFood();
+            } else {
+                // Remove last snake segment
+                snake.pop();
+            }
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw snake
+            snake.forEach((segment) => {
+                ctx.fillStyle = "#00FF00";
+                ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
+            });
+
+            // Draw food
+            ctx.fillStyle = "#FF0000";
+            ctx.fillRect(food.x, food.y, gridSize, gridSize);
+        }
+
+        // Check if snake collides with itself
+        function isCollision(head) {
+            return snake.some((segment, index) => {
+                return index !== 0 && segment.x === head.x && segment.y === head.y;
+            });
+        }
+
+        // Generate food at random location
+        function generateFood() {
+            food = {
+                x: Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize,
+                y: Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize
+            };
+        }
+
+        // Reset the game
+        function resetGame() {
+            snake = [{ x: 8 * gridSize, y: 8 * gridSize }];
+            dx = gridSize;
+            dy = 0;
+            score = 0;
+            document.getElementById("score").textContent = `Score: ${score}`;
+            generateFood();
+        }
+
+        // Start the game loop
+        generateFood();
+        setInterval(game, speed);
+    </script>
+</body>
+
+</html>

@@ -376,11 +376,12 @@ void RequestHandler::deleteReq(void) {
 }
 
 void RequestHandler::autoIndex() {
-  std::cout << "Generating directory listing..." << std::endl;
-  std::cout << pathWithRoot << std::endl;
   std::string pathlisting = pathWithRoot.substr(1, std::string::npos);
+  if (pathlisting.empty())
+    pathlisting += ".";
   DIR* dir = opendir(pathlisting.c_str());
-
+  std::cout << "path:" << path << std::endl;
+  std::cout << pathlisting << std::endl;
   if (dir == NULL) {
     responseStatus = 404;
     return;
@@ -389,12 +390,12 @@ void RequestHandler::autoIndex() {
   responseContent =
       "<html><head><title>Directory Listing</title>"
       "<style>"
-      "body { font-family: Arial, sans-serif; background-color: #f4f4f4; "
+      "body { font-family: Arial, sans-serif; background-color: #87CEEB;"
       "margin: 20px; }"
       "h2 { color: #fff; text-align: center; }"
-      ".listing-container { background: #333; padding: 20px; border-radius: "
+      ".listing-container { background:rgb(215, 155, 15); padding: 20px; border-radius: "
       "10px; "
-      "    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); max-width: 600px; "
+      "    box-shadow: 0px 4px 10px rgb(0, 0, 0); max-width: 600px; "
       "margin: auto; }"
       "ul { list-style: none; padding: 0; margin: 0; }"
       "li { margin: 8px 0; display: flex; align-items: center; }"
@@ -402,8 +403,8 @@ void RequestHandler::autoIndex() {
       "img { width: 16px; height: 16px; margin-right: 10px; }"
       "</style></head>"
       "<body><div class='listing-container'><h2>Directory Listing: " +
-      pathlisting + "</h2><ul>";
-	  
+      path + "</h2><ul>";
+
   struct dirent* entry;
   while ((entry = readdir(dir)) != NULL) {
     std::string entryName = entry->d_name;
@@ -411,7 +412,7 @@ void RequestHandler::autoIndex() {
       continue;
     }
     std::string icon = (entry->d_type == DT_DIR) ? "📁" : "📄";
-    responseContent += "<li>" + icon + " <a href=\"" + pathWithRoot + entryName;
+    responseContent += "<li>" + icon + " <a href=\"" + entryName;
     if (entry->d_type == DT_DIR) {
       responseContent += "/\">" + entryName + "/</a></li>";
     } else {
@@ -427,8 +428,8 @@ void RequestHandler::redirect(void) {
   if (routeConfig.redirect.size() == 2) {
     int status = atoi(routeConfig.redirect[0].c_str());
 
-    if (status >= 300 && status < 400) {
-      responseStatus = 301;
+    if (status >= 301 && status <= 303) {
+      responseStatus = status;
       responseHeaders["Location"] = routeConfig.redirect[1];
     } else {
       responseStatus = 500;
@@ -447,7 +448,7 @@ void RequestHandler::indexCheck() {
     responseStatus = 404;
     return;
   }
-  
+
   std::ifstream file(index_path.c_str());
   if (!file.is_open()) {
     if (routeConfig.autoindex == "on") {

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Check Links</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #87CEEB;
+			/* Kolor tła przypominający niebo */
+			margin: 0;
+			padding: 0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			height: 100vh;
+		}
+
+		.island {
+			background-color: rgb(215, 155, 15);
+			/* Kolor przypominający trawę / ziemię */
+			padding: 20px;
+			border-radius: 10px;
+			box-shadow: 10px 4px 10px rgba(0, 0, 0, 0.3);
+			text-align: center;
+			width: 80%;
+			max-width: 600px;
+		}
+
+		h1 {
+			margin-bottom: 20px;
+			color: white;
+		}
+
+		.link-list {
+			list-style-type: none;
+			padding: 0;
+			margin: 0;
+		}
+
+		.link-list li {
+			margin: 10px 0;
+			font-size: 1.2em;
+		}
+
+		.link-list a {
+			color: #007BFF;
+			text-decoration: none;
+		}
+
+		.link-list a:hover {
+			text-decoration: underline;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="island">
+		<h1>Links for YOU:</h1>
+		<ul class="link-list">
+			<li><a href="http://localhost:8084/mum's_friend's_son/">Check your mum's friend's son's site</a></li>
+			<li><a href="http://localhost:8084/exmaple_files/ask_cgi.html">Check Cgi with POST or GET method</a></li>
+			<li><a href="http://localhost:8084/example_files/">Check directory listing</a></li>
+			<li><a href="http://localhost:8084/exmaple_files/upload.html">Check uploading files</a></li>
+			<li><a href="http://localhost:8084/example_files/delete.html">Check deleting files</a></li>
+			<li><a href="http://localhost:8084/example_files/nice_site.html">Check ChatGPT's game</a></li>
+		</ul>
+	</div>
+</body>
+
+</html>

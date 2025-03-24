@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>400 Bad Request</title>
+    <style>
+        body {
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            margin: 0;
+            position: relative;
+        }
+        .error-text {
+            font-size: 5em;
+            color: white;
+            font-weight: bold;
+            opacity: 0;
+            transform: scale(100);
+            transition: opacity 1s, transform 4s;
+        }
+        .visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-text">400 Bad Request</div>
+    
+    <script>
+        setTimeout(() => {
+            document.querySelector('.error-text').classList.add('visible');
+        }, 10);
+    </script>
+</body>
+</html>
