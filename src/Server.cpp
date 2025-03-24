@@ -148,7 +148,6 @@ void Server::serverListen() {
         std::string response;
         generateResponse(pollFdIt, response);
         pollFdIt = sendDataToClient(pollFdIt, response);
-
         continue;
       }
       ++pollFdIt;
@@ -164,7 +163,7 @@ void Server::createPollFd(const pollfd listenFd, std::string& hostPortPair) {
     throw std::runtime_error(std::string("Accept error") +
                              std::string(strerror(errno)));
   setNonblocking(clientFd);
-  pollfd clientPfd = {clientFd, POLLIN | POLLOUT, 0};
+  pollfd clientPfd = {clientFd, POLLIN, 0};
   pollFds.push_back(clientPfd);
 
   createIoSocketData(clientFd, hostPortPair);
@@ -197,12 +196,15 @@ std::vector<pollfd>::iterator Server::receiveDataFromClient(
     clientFdToIoSocketData.erase(pollFdIt->fd);
     return pollFds.erase(pollFdIt);
   } else {
-    std::string clientRequest(buffer, bytesReceived);
-    clientFdToIoSocketData.at(pollFdIt->fd).clientRequest += clientRequest;
+    std::string clientRequestChunk(buffer, bytesReceived);
+    clientFdToIoSocketData.at(pollFdIt->fd).clientRequest += clientRequestChunk;
     std::cout << "**NEW REQUEST RECEIVED from "
               << clientFdToIoSocketData.at(pollFdIt->fd).hostPortPair
               << " - bytes received: " << bytesReceived << std::endl;
-    if (!(pollFdIt->events & POLLOUT))
+
+    if (clientFdToIoSocketData.at(pollFdIt->fd)
+                .clientRequest.find("\r\n\r\n") != std::string::npos &&
+        !(pollFdIt->events & POLLOUT))
       pollFdIt->events |= POLLOUT;
     return ++pollFdIt;
   }
