@@ -45,7 +45,7 @@ make
 ./webserv [config_file]
 
 # Default configuration
-./webserv config/default.conf
+./webserv example_files/webserv.conf
 ```
 
 ## Technical Implementation
