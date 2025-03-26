@@ -1,45 +1,72 @@
 <!DOCTYPE html>
 <html lang="pl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload plików</title>
-    <script>
-        function validateFiles(input) {
-            if (input.files.length > 4) {
-                alert("Możesz przesłać maksymalnie 4 pliki!");
-                input.value = ""; // Resetuje pole wyboru plików
-            }
+    <title>Upload Files</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #87CEEB;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
 
-        function handleUpload(event) {
-            event.preventDefault(); // Zapobiega domyślnemu wysłaniu formularza
-
-            let form = event.target;
-            let formData = new FormData(form);
-
-            fetch(form.action, {
-                method: "POST",
-                body: formData
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.href = "http://localhost:8080/example_files/uploads/";
-                } else {
-                    alert("Błąd podczas przesyłania plików!");
-                }
-            })
-            .catch(error => alert("Wystąpił błąd: " + error));
+        .island {
+            background-color: rgb(215, 155, 15);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 10px 4px 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
         }
-    </script>
+
+        h1 {
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type="file"] {
+            margin: 10px 0;
+        }
+
+        input[type="submit"] {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1.1em;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #218838;
+        }
+    </style>
 </head>
+
 <body>
-    <h2>Wyślij pliki</h2>
-    <form action="uploads" method="POST" enctype="multipart/form-data" onsubmit="handleUpload(event)">
-        <label for="file">Wybierz pliki (maks. 4):</label>
-        <input type="file" name="file[]" id="file" multiple onchange="validateFiles(this)">
-        <br><br>
-        <input type="submit" value="Wyślij">
-    </form>
+    <div class="island">
+        <h1>Upload Your Files:</h1>
+        <form action="http://localhost:8084/example_files/uploads/" method="POST" enctype="multipart/form-data">
+            <label for="file">Choose a file to upload:</label>
+            <input type="file" name="file" id="file" required />
+            <input type="submit" value="Upload File" />
+        </form>
+    </div>
 </body>
+
 </html>

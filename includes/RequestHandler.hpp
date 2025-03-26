@@ -36,8 +36,8 @@ class RequestHandler {
   unsigned int responseStatus;  ///< HTTP response status code.
   std::string responseContent;  ///< HTTP response body/content.
   std::map<std::string, std::string>
-      responseHeaders;  ///< HTTP response headers.
-  long conLen;          ///< Content-Length value from the request.
+      responseHeaders;     ///< HTTP response headers.
+  long conLen;             ///< Content-Length value from the request.
 
   // Private methods
 
@@ -47,13 +47,14 @@ class RequestHandler {
    * This method extracts the method, path, version, headers, and body from
    * the raw request data.
    */
-  void parseRequest();
+  void parseRequest(ConfigTypes::ServerConfig& server);
 
   /**
    * @brief Sets the route configuration based on a server configuration.
    *
    * @param serverConfig The server configuration used to determine settings
    *                     for the route.
+   * @param server The server configuration for handling the request.
    */
   void setRouteConfig(const ConfigTypes::ServerConfig& serverConfig);
 
@@ -106,7 +107,7 @@ class RequestHandler {
    *
    * @param rawRequest The raw HTTP request string.
    */
-  RequestHandler(std::string rawRequest);
+  RequestHandler(std::string rawRequest, ConfigTypes::ServerConfig& server);
 
   /**
    * @brief Retrieves the response headers to be sent to the client.

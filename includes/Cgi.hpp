@@ -57,7 +57,7 @@ class Cgi {
   std::string queryString;  ///< Query string extracted from the URL.
   std::string pathInfo;     ///< Additional path information.
   std::string scriptPath;   ///< Filesystem path to the CGI script.
-  char* cgiEnvp[7];     ///< Array of environment variables for the CGI process.
+  char* cgiEnvp[8];     ///< Array of environment variables for the CGI process.
   char* cgiPath;        ///< Path to the CGI interpreter.
   char* cgiScriptPath;  ///< Path to the CGI script to run.
   size_t posPython;     ///< Position index for Python CGI.

@@ -229,7 +229,7 @@ void Server::generateResponse(std::vector<pollfd>::iterator pollFdIt,
             << " and serverName " << serverName << std::endl;
   ConfigTypes::ServerConfig server =
       serversConfig.getServerConfig(socket.hostPortPair, serverName);
-  RequestHandler request(socket.clientRequest);
+  RequestHandler request(socket.clientRequest, server);
   request.handleRequest(server);
 
   HttpResponse httpResponse;

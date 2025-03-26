@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Files</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #87CEEB;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .island {
+            background-color: rgb(215, 155, 15);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 10px 4px 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 1.1em;
+        }
+
+        button:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="island">
+        <h1>Delete Your File:</h1>
+        <label for="fileName">File to delete:</label>
+        <input type="text" id="fileName" placeholder="Enter file name" required />
+        <button onclick="deleteFile()">Delete File</button>
+    </div>
+
+    <script>
+        function deleteFile() {
+            const fileName = document.getElementById('fileName').value;
+            
+            if (fileName) {
+                // Tworzymy obiekt XMLHttpRequest
+                const xhr = new XMLHttpRequest();
+                
+                // Konfigurujemy żądanie DELETE do lokalnego serwera
+                xhr.open('DELETE', `http://localhost:8084/public/${encodeURIComponent(fileName)}`, true);
+                
+                // Ustawiamy nagłówki (opcjonalnie, w zależności od wymagań serwera)
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                
+                // Obsługa odpowiedzi
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        alert('Plik został pomyślnie usunięty.');
+                    } else {
+                        alert('Wystąpił błąd podczas usuwania pliku.');
+                    }
+                };
+
+                // Wysyłamy żądanie
+                xhr.send();
+            } else {
+                alert('Proszę podać nazwę pliku do usunięcia.');
+            }
+        }
+    </script>
+</body>
+
+</html>

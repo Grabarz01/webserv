@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGI Form Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #87CEEB;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .form-container {
+            background-color: rgb(215, 155, 15);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 10px 4px 10px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: white;
+        }
+
+        .form-group {
+            margin: 10px 0;
+            text-align: left;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            color: white;
+        }
+
+        select,
+        input[type="text"],
+        input[type="submit"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        input[type="submit"] {
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            border: none;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        /* Ukrycie pola "How do you feel?" domyślnie */
+        #feeling-container {
+            display: none;
+        }
+    </style>
+    <script>
+        function updateFormAction(event) {
+            event.preventDefault(); // Zatrzymuje domyślne wysyłanie formularza
+
+            let form = document.getElementById("cgiForm");
+            let method = document.getElementById("method").value;
+            let cgiExtension = document.getElementById("cgi").value;
+            let firstname = document.getElementById("firstname").value;
+            let feeling = document.getElementById("feeling").value.trim();
+            let actionUrl;
+
+            // Wybór odpowiedniego pliku CGI
+            switch (cgiExtension) {
+                case ".php":
+                    actionUrl = "hello.php";
+                    break;
+                case ".py":
+                    actionUrl = "hello.py";
+                    break;
+                default:
+                    actionUrl = "hello.cgi"; // Domyślna obsługa dla innych CGI
+            }
+
+            if (method === "GET") {
+                // Tworzymy query string dla GET
+                let params = new URLSearchParams({ firstname: firstname });
+                window.location.href = `${actionUrl}?${params.toString()}`;
+            } else {
+                // Tworzymy zakodowany ciąg danych dla POST
+                let formData = new URLSearchParams();
+                formData.append("firstname", firstname);
+                if (feeling !== "") {
+                    formData.append("feeling", feeling);
+                }
+
+                fetch(actionUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: formData.toString()
+                })
+                .then(response => response.text())
+                .then(data => document.write(data)) // Wyświetlenie odpowiedzi serwera
+                .catch(error => console.error("Błąd:", error));
+            }
+        }
+
+        function toggleFeelingField() {
+            let method = document.getElementById("method").value;
+            let feelingContainer = document.getElementById("feeling-container");
+
+            if (method === "POST") {
+                feelingContainer.style.display = "block";
+            } else {
+                feelingContainer.style.display = "none";
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div class="form-container">
+        <h1>Form for CGI</h1>
+        <form id="cgiForm" action="#" method="POST" onsubmit="updateFormAction(event)">
+            <!-- Method Selection -->
+            <div class="form-group">
+                <label for="method">Select HTTP Method:</label>
+                <select id="method" name="method" onchange="toggleFeelingField()">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                </select>
+            </div>
+
+            <!-- CGI Type -->
+            <div class="form-group">
+                <label for="cgi">Choose CGI Extension:</label>
+                <select id="cgi" name="cgi">
+                    <option value=".php">PHP</option>
+                    <option value=".py">Python</option>
+                </select>
+            </div>
+
+            <!-- First Name -->
+            <div class="form-group">
+                <label for="firstname">First Name:</label>
+                <input type="text" id="firstname" name="firstname" placeholder="Enter your first name" required>
+            </div>
+
+            <!-- How do you feel? (only for POST) -->
+            <div class="form-group" id="feeling-container">
+                <label for="feeling">How do you feel?</label>
+                <textarea id="feeling" name="feeling" placeholder="Describe your feelings..."></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-group">
+                <input type="submit" value="Submit">
+            </div>
+        </form>
+    </div>
+</body>
+
+</html>

@@ -46,11 +46,12 @@ static std::vector<std::string> initImplementedMethods() {
   return std::vector<std::string>(methods, methods + count);
 }
 
-RequestHandler::RequestHandler(std::string rawRequest)
+RequestHandler::RequestHandler(std::string rawRequest,
+                               ConfigTypes::ServerConfig& server)
     : rawRequest(rawRequest),
       responseStatus(200),
       implementedMethods(initImplementedMethods()) {
-  parseRequest();
+  parseRequest(server);
 };
 
 const std::map<std::string, std::string>& RequestHandler::getResponseHeaders(
@@ -58,7 +59,7 @@ const std::map<std::string, std::string>& RequestHandler::getResponseHeaders(
   return this->responseHeaders;
 }
 
-void RequestHandler::parseRequest() {
+void RequestHandler::parseRequest(ConfigTypes::ServerConfig& server) {
   std::istringstream req(rawRequest);
   req >> this->method >> this->path >> this->version;
   std::cerr << "method: " << method << std::endl;
@@ -75,7 +76,12 @@ void RequestHandler::parseRequest() {
       headers[key] = value;
     }
   }
-  if (routeConfig.maxBodySize < headers["Content-Length"])
+
+  setRouteConfig(server);
+  copyDefaultValuesToRouteConfig(routeConfig, server);
+
+  if (atoi(routeConfig.maxBodySize.c_str()) <
+      atoi(headers["Content-Length"].c_str()))
     return;
   else if (headers.find("Transfer-Encoding") != headers.end() &&
            headers["Transfer-Encoding"] == "chunked") {
@@ -87,15 +93,12 @@ void RequestHandler::parseRequest() {
       }
 
       int chunk_size = std::strtol(chunk_size_str.c_str(), NULL, 16);
-      std::cerr << "Chunk Size: " << chunk_size << std::endl;
-
       if (chunk_size == 0) {
         break;
       }
       std::string chunk(chunk_size, '\0');
       req.read(&chunk[0], chunk_size);
       body += chunk;
-
       std::getline(req, chunk_size_str);
     }
 
@@ -119,7 +122,6 @@ void RequestHandler::setRouteConfig(
     route = route.substr(0, queryPos);
   }
 
-  // std::cout << "receivedRoute: " << route << std::endl;
   while (!route.empty()) {
     if (serverConfig.routes.find(route) != serverConfig.routes.end()) {
       std::map<std::string, ConfigTypes::RouteConfig>::const_iterator it;
@@ -162,8 +164,6 @@ void RequestHandler::printRequest() {
 }
 
 void RequestHandler::handleRequest(ConfigTypes::ServerConfig& server) {
-  setRouteConfig(server);
-  copyDefaultValuesToRouteConfig(routeConfig, server);
   setPathWithRoot();
   setCgiPath(server.cgiPathPhp, server.cgiPathPython);
   if (std::find(implementedMethods.begin(), implementedMethods.end(), method) ==
@@ -225,7 +225,7 @@ void RequestHandler::setPathWithRoot() {
 
   pathWithRoot = routeConfig.root + path.substr(route.size(), path.size());
 
-  std::cout << "pathWithRoot: " << pathWithRoot << std::endl;
+  // std::cout << "pathWithRoot: " << pathWithRoot << std::endl;
 }
 
 void RequestHandler::getReq(void) {
@@ -265,6 +265,7 @@ void RequestHandler::getCgiHandler(Cgi& cgi) {
     return;
   }
   pid_t pid = fork();
+  int status;
   if (pid == -1) {
     std::cerr << "Fork failed\n";
     responseStatus = 500;
@@ -287,7 +288,17 @@ void RequestHandler::getCgiHandler(Cgi& cgi) {
     // server
     close(pipe_response[1]);
     cgi.readResponse(responseContent, responseStatus, pipe_response);
-    waitpid(pid, NULL, 0);
+    waitpid(pid, &status, 0);
+    if (WIFEXITED(status)) {
+      if (WEXITSTATUS(status) != 0) {
+        std::cerr << "Error: CGI script failed" << std::endl;
+        responseStatus = 500;
+      } else
+        responseStatus = 200;
+    } else {
+      std::cerr << "Error: CGI script failed" << std::endl;
+      responseStatus = 500;
+    }
   }
 }
 
@@ -303,7 +314,7 @@ void RequestHandler::postReq() {
     return;
 
   cgi.extractEnvFromPath(pathWithRoot);
-
+  int status;
   int pipe_input[2];
   int pipe_response[2];
   if (pipe(pipe_input) == -1 || pipe(pipe_response) == -1) {
@@ -340,12 +351,38 @@ void RequestHandler::postReq() {
     close(pipe_input[0]);
     close(pipe_response[1]);
 
-    write(pipe_input[1], body.c_str(), body.size());
+    size_t pos = 0;
+    size_t bodySize = body.size();
+
+    while (pos < bodySize) {
+      size_t chunkSize = std::min<size_t>(1024, bodySize - pos);
+      ssize_t bytesWritten =
+          write(pipe_input[1], body.c_str() + pos, chunkSize);
+      if (bytesWritten == -1) {
+        std::cerr << "Error writing to pipe\n";
+        perror("error:");
+        responseStatus = 500;
+        close(pipe_input[1]);
+        return;
+      }
+      pos += bytesWritten;
+    }
     close(pipe_input[1]);
 
     cgi.readResponse(responseContent, responseStatus, pipe_response);
 
-    waitpid(pid, NULL, 0);
+    waitpid(pid, &status, 0);
+    if (WEXITSTATUS(status) != 0)
+      if (WIFEXITED(status)) {
+        if (WEXITSTATUS(status) != 0) {
+          std::cerr << "Error: CGI script failed" << std::endl;
+          responseStatus = 500;
+        } else
+          responseStatus = 200;
+      } else {
+        std::cerr << "Error: CGI script failed" << std::endl;
+        responseStatus = 500;
+      }
   }
 }
 
@@ -357,7 +394,7 @@ void RequestHandler::deleteReq(void) {
   if (pathWithRoot[0] == '/') {
     pathWithRoot.erase(pathWithRoot.begin());
   }
-  std::cout << pathWithRoot << std::endl;
+  // std::cout << pathWithRoot << std::endl;
   if (remove(pathWithRoot.c_str()) == 0) {
     responseStatus = 200;
     responseContent = "File deleted successfully";
@@ -380,8 +417,8 @@ void RequestHandler::autoIndex() {
   if (pathlisting.empty())
     pathlisting += ".";
   DIR* dir = opendir(pathlisting.c_str());
-  std::cout << "path:" << path << std::endl;
-  std::cout << pathlisting << std::endl;
+  // std::cout << "path:" << path << std::endl;
+  // std::cout << pathlisting << std::endl;
   if (dir == NULL) {
     responseStatus = 404;
     return;
@@ -393,7 +430,8 @@ void RequestHandler::autoIndex() {
       "body { font-family: Arial, sans-serif; background-color: #87CEEB;"
       "margin: 20px; }"
       "h2 { color: #fff; text-align: center; }"
-      ".listing-container { background:rgb(215, 155, 15); padding: 20px; border-radius: "
+      ".listing-container { background:rgb(215, 155, 15); padding: 20px; "
+      "border-radius: "
       "10px; "
       "    box-shadow: 0px 4px 10px rgb(0, 0, 0); max-width: 600px; "
       "margin: auto; }"

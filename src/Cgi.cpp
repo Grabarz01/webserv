@@ -1,4 +1,5 @@
 #include "Cgi.hpp"
+#include <stdio.h>
 #include <unistd.h>
 #include <algorithm>
 #include <cstring>
@@ -16,13 +17,13 @@ std::string Cgi::extractQuery(std::string& path) {
 }
 
 Cgi::Cgi() : cgiPath(NULL), cgiScriptPath(NULL) {
-  for (size_t i = 0; i < 7; ++i) {
+  for (size_t i = 0; i < 8; ++i) {
     cgiEnvp[i] = NULL;
   }
 }
 
 Cgi::~Cgi() {
-  for (size_t i = 0; i < 7; ++i) {
+  for (size_t i = 0; i < 8; ++i) {
     if (cgiEnvp[i] != NULL) {
       delete[] cgiEnvp[i];
       cgiEnvp[i] = NULL;
@@ -46,7 +47,7 @@ std::string Cgi::extractPathInfo(std::string& path, size_t size) {
 std::string Cgi::extractScriptPath(std::string& path, size_t size) {
   std::string result;
   result = path.substr(1, posCgiExt + size - 1);
-  std::cerr << result << std::endl;
+  //std::cerr << result << std::endl;
   return result;
 }
 std::string Cgi::getQuery() {
@@ -77,6 +78,7 @@ void Cgi::setEnvp(std::string& method,
                                 ? "CONTENT_TYPE=" + headers["Content-Type"]
                                 : "CONTENT_TYPE=text/plain";
   std::string serverProtocol = "SERVER_PROTOCOL=HTTP/1.1";
+  std::string redirectStatus = "REDIRECT_STATUS=1";
 
   for (size_t i = 0; i < 6; ++i) {
     if (cgiEnvp[i] != NULL) {
@@ -95,7 +97,9 @@ void Cgi::setEnvp(std::string& method,
   std::strcpy(cgiEnvp[4], queryString.c_str());
   cgiEnvp[5] = new char[pathInfo.size() + 1];
   std::strcpy(cgiEnvp[5], pathInfo.c_str());
-  cgiEnvp[6] = NULL;
+  cgiEnvp[6] = new char[redirectStatus.size() + 1];
+  std::strcpy(cgiEnvp[6], redirectStatus.c_str());
+  cgiEnvp[7] = NULL;
   //   for (size_t i = 0; i < 6; ++i) {
   //     std::cerr << "[" << i << "] " << cgiEnvp[i] << std::endl;
   //     std::cerr.flush();
@@ -129,6 +133,11 @@ char* Cgi::getScriptPath() {
 
 void Cgi::runCgi(void) {
   char* args[] = {cgiPath, cgiScriptPath, NULL};
+  //   for (int i = 0; cgiEnvp[i] != NULL; i++) {
+  //     std::cerr << "cgiEnvp" << i << ": " << cgiEnvp[i] << std::endl;
+  //   }
+  //   std::cerr << "cgiScriptPath: " << cgiScriptPath << std::endl;
+  //   std::cerr << "cgiPath: " << cgiPath << std::endl;
   execve(cgiScriptPath, args, cgiEnvp);
 }
 
@@ -144,6 +153,7 @@ void Cgi::readResponse(std::string& responseContent,
   }
 
   if (bytesRead == -1) {
+    std::cerr << "ERR: Read error\n";
     responseStatus = 500;
   }
   close(pipe_response[0]);
