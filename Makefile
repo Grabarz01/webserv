@@ -6,8 +6,7 @@ OBJDIR	= obj
 OBJS	= $(SRCS:src/%.cpp=$(OBJDIR)/%.o)
 
 CXX = c++
-CXXFLAGS = -std=c++98 -I includes/ -g
-#-Wall -Wextra -Werror
+CXXFLAGS = -std=c++98 -I includes/ -Wall -Wextra -Werror
 
 all:	$(NAME)
 

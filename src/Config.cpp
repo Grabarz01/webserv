@@ -120,7 +120,7 @@ void setRouteParameterValue(ParameterType type,
     } break;
     case PARAM_ROUTE_MAX_BODY_SIZE: {
       iss >> route.maxBodySize;
-      for (size_t i; i < route.maxBodySize.size(); i++) {
+      for (size_t i = 0; i < route.maxBodySize.size(); i++) {
         if (!isdigit(route.maxBodySize[i]))
           throw std::runtime_error("Configuration file: maxBodySize invalid");
       }

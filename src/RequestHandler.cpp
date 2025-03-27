@@ -49,8 +49,8 @@ static std::vector<std::string> initImplementedMethods() {
 RequestHandler::RequestHandler(std::string rawRequest,
                                ConfigTypes::ServerConfig& server)
     : rawRequest(rawRequest),
-      responseStatus(200),
-      implementedMethods(initImplementedMethods()) {
+      implementedMethods(initImplementedMethods()),
+      responseStatus(200) {
   parseRequest(server);
 };
 
@@ -213,7 +213,7 @@ const std::string& RequestHandler::getResponseContent() const {
   return responseContent;
 }
 
-const unsigned int RequestHandler::getResponseStatus() const {
+unsigned int RequestHandler::getResponseStatus() const {
   return responseStatus;
 }
 
@@ -372,17 +372,19 @@ void RequestHandler::postReq() {
     cgi.readResponse(responseContent, responseStatus, pipe_response);
 
     waitpid(pid, &status, 0);
-    if (WEXITSTATUS(status) != 0)
+    if (WEXITSTATUS(status) != 0) {
       if (WIFEXITED(status)) {
         if (WEXITSTATUS(status) != 0) {
           std::cerr << "Error: CGI script failed" << std::endl;
           responseStatus = 500;
-        } else
+        } else {
           responseStatus = 200;
+        }
       } else {
         std::cerr << "Error: CGI script failed" << std::endl;
         responseStatus = 500;
       }
+    }
   }
 }
 

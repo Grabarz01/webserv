@@ -36,8 +36,8 @@ class RequestHandler {
   unsigned int responseStatus;  ///< HTTP response status code.
   std::string responseContent;  ///< HTTP response body/content.
   std::map<std::string, std::string>
-      responseHeaders;     ///< HTTP response headers.
-  long conLen;             ///< Content-Length value from the request.
+      responseHeaders;  ///< HTTP response headers.
+  long conLen;          ///< Content-Length value from the request.
 
   // Private methods
 
@@ -163,7 +163,7 @@ class RequestHandler {
    *
    * @return The HTTP response status code.
    */
-  const unsigned int getResponseStatus() const;
+  unsigned int getResponseStatus() const;
 };
 
 #endif

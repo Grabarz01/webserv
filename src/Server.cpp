@@ -136,7 +136,8 @@ void Server::serverListen() {
 
     while (pollFdIt != pollFds.end()) {
       if (pollFdIt->revents & POLLIN) {
-        if (std::distance(pollFds.begin(), pollFdIt) < hostPortPairs.size()) {
+        if (static_cast<std::size_t>(std::distance(pollFds.begin(), pollFdIt)) <
+            hostPortPairs.size()) {
           createPollFd(*pollFdIt,
                        clientFdToIoSocketData[pollFdIt->fd].hostPortPair);
         } else {
