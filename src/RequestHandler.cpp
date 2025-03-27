@@ -260,12 +260,14 @@ void RequestHandler::getReq(void) {
 void RequestHandler::getCgiHandler(Cgi& cgi) {
   int pipe_response[2];
   if (pipe(pipe_response) == -1) {
-    std::cerr << "Fork failed\n";
+    std::cerr << "Pipe creation failed\n";
     responseStatus = 500;
     return;
   }
+
   pid_t pid = fork();
   int status;
+
   if (pid == -1) {
     std::cerr << "Fork failed\n";
     responseStatus = 500;
@@ -273,6 +275,7 @@ void RequestHandler::getCgiHandler(Cgi& cgi) {
   }
 
   if (pid == 0) {
+    // Proces dziecka (CGI)
     close(pipe_response[0]);
     dup2(pipe_response[1], STDOUT_FILENO);
 
@@ -285,20 +288,42 @@ void RequestHandler::getCgiHandler(Cgi& cgi) {
     perror("Execve failed\n");
     exit(1);
   } else {
-    // server
     close(pipe_response[1]);
-    cgi.readResponse(responseContent, responseStatus, pipe_response);
-    waitpid(pid, &status, 0);
-    if (WIFEXITED(status)) {
-      if (WEXITSTATUS(status) != 0) {
-        std::cerr << "Error: CGI script failed" << std::endl;
+
+    const int maxIterations = 50;
+    const int sleepDuration = 100000;
+    int iteration = 0;
+
+    while (iteration < maxIterations) {
+      pid_t result = waitpid(pid, &status, WNOHANG);
+      if (result == pid) {
+        if (WIFEXITED(status)) {
+          if (WEXITSTATUS(status) != 0) {
+            std::cerr << "Error: CGI script failed" << std::endl;
+            responseStatus = 500;
+          } else {
+            responseStatus = 200;
+          }
+        } else {
+          std::cerr << "Error: CGI script terminated abnormally" << std::endl;
+          responseStatus = 500;
+        }
+        break;
+      } else if (result == 0) {
+        usleep(sleepDuration);
+        iteration++;
+      } else {
+        std::cerr << "Error: waitpid failed: " << strerror(errno) << std::endl;
         responseStatus = 500;
-      } else
-        responseStatus = 200;
-    } else {
-      std::cerr << "Error: CGI script failed" << std::endl;
+        break;
+      }
+    }
+    if (iteration >= maxIterations) {
+      std::cerr << "Error: CGI script timeout" << std::endl;
+      kill(pid, SIGKILL);
       responseStatus = 500;
     }
+    cgi.readResponse(responseContent, responseStatus, pipe_response);
   }
 }
 
